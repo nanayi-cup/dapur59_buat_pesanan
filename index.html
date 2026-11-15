@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dapur 59 - Pre-Order Makanan & Pembukuan</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome untuk Ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            200: '#fed7aa',
+                            300: '#fdba74',
+                            400: '#fb923c',
+                            500: '#f97316',
+                            600: '#ea580c',
+                            700: '#c2410c',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #fafaf9;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .fade-in {
+            animation: fadeIn 0.25s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f5f5f4;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d6d3d1;
+            border-radius: 999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a29e;
+        }
+    </style>
+</head>
+<body class="text-stone-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Toast / Notification Banner (Pengganti alert) -->
+    <div id="toast-container" class="fixed top-4 right-4 left-4 md:left-auto md:w-96 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- ========================================== -->
+    <!-- 1. LANDING PAGE (PILIH PERAN)              -->
+    <!-- ========================================== -->
+    <div id="view-landing" class="flex-1 flex flex-col items-center justify-center p-5 bg-gradient-to-br from-orange-50 via-amber-50 to-stone-100">
+        <div class="max-w-md w-full bg-white rounded-3xl shadow-xl border border-orange-100 p-7 sm:p-9 text-center fade-in">
+            <div class="w-20 h-20 bg-gradient-to-tr from-brand-600 to-amber-400 rounded-2xl mx-auto flex items-center justify-center text-white text-3xl shadow-lg shadow-orange-200 mb-5">
+                <i class="fa-solid fa-utensils"></i>
+            </div>
+            <h1 class="font-display text-3xl font-extrabold text-stone-900 tracking-tight">Dapur 59</h1>
+            <p class="text-stone-500 text-sm mt-2 leading-relaxed">
+                Jajanan & Sarapan Homemade Hangat.<br>
+                Praktis pesan tanpa antre, serba <span class="font-semibold text-brand-600">Rp 10.000</span>!
+            </p>
+
+            <div class="mt-8 space-y-3.5">
+                <button onclick="navigateTo('buyer')" class="w-full py-4 px-5 bg-brand-600 hover:bg-brand-700 active:scale-[0.99] text-white font-semibold rounded-2xl shadow-md shadow-orange-200 transition flex items-center justify-between group">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-bag-shopping"></i>
+                        </div>
+                        <div class="text-left">
+                            <div class="text-base font-bold">Masuk sebagai Pembeli</div>
+                            <div class="text-xs text-orange-100 font-normal">Pesan makanan atau kirim saran</div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-orange-200 group-hover:translate-x-1 transition-transform"></i>
+                </button>
+
+                <button onclick="openAdminModal()" class="w-full py-4 px-5 bg-stone-50 hover:bg-stone-100 active:scale-[0.99] text-stone-700 border border-stone-200 font-semibold rounded-2xl transition flex items-center justify-between group">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-stone-200/70 text-stone-600 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <div class="text-left">
+                            <div class="text-base font-bold text-stone-800">Masuk sebagai Admin</div>
+                            <div class="text-xs text-stone-500 font-normal">Kelola pesanan, pembayaran & buku kas</div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-stone-400 group-hover:translate-x-1 transition-transform"></i>
+                </button>
+            </div>
+
+            <div class="mt-8 pt-5 border-t border-stone-100 text-xs text-stone-400 flex items-center justify-center gap-2">
+                <i class="fa-regular fa-clock"></i>
+                <span>Buka PO Mingguan: Jumat 23:59 &bull; Tutup H-1 23:59</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Login Admin -->
+    <div id="modal-admin-login" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-40 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-display text-lg font-bold text-stone-900">Verifikasi Admin</h3>
+                <button onclick="closeAdminModal()" class="w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <p class="text-sm text-stone-500 mb-4">Masukkan kata sandi khusus pengelola Dapur 59 untuk mengakses pembukuan.</p>
+            <form onsubmit="handleAdminLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-1.5">Password Admin</label>
+                    <div class="relative">
+                        <input type="password" id="admin-password-input" placeholder="Masukkan password..." required
+                            class="w-full px-4 py-3 rounded-xl border border-stone-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-stone-800">
+                        <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-3 text-stone-400 hover:text-stone-600">
+                            <i id="pw-eye-icon" class="fa-regular fa-eye"></i>
+                        </button>
+                    </div>
+                    <p id="admin-login-error" class="text-xs text-red-600 mt-1.5 hidden font-medium">
+                        <i class="fa-solid fa-circle-exclamation mr-1"></i> Password salah! Coba lagi.
+                    </p>
+                </div>
+                <div class="flex gap-2.5 pt-2">
+                    <button type="button" onclick="closeAdminModal()" class="flex-1 py-2.5 rounded-xl border border-stone-200 text-stone-600 font-semibold text-sm hover:bg-stone-50">Batal</button>
+                    <button type="submit" class="flex-1 py-2.5 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 shadow-md shadow-orange-200">Masuk Dashboard</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 2. TAMPILAN PEMBELI (BUYER VIEW)           -->
+    <!-- ========================================== -->
+    <div id="view-buyer" class="hidden flex-1 flex flex-col max-w-2xl w-full mx-auto bg-white shadow-sm min-h-screen">
+        <!-- Header Pembeli -->
+        <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-stone-100 px-4 py-3.5 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <button onclick="navigateTo('landing')" class="w-9 h-9 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center transition" title="Kembali ke Awal">
+                    <i class="fa-solid fa-arrow-left text-sm"></i>
+                </button>
+                <div>
+                    <h1 class="font-display font-bold text-stone-900 text-base leading-tight">Dapur 59</h1>
+                    <p class="text-[11px] text-brand-600 font-medium">Serba Rp 10.000 / Porsi</p>
+                </div>
+            </div>
+
+            <!-- Kontrol Simulasi Waktu (Untuk Pengujian Jadwal PO) -->
+            <div class="flex items-center gap-1.5">
+                <button onclick="toggleTimeSimulator()" class="text-xs bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition">
+                    <i class="fa-regular fa-clock"></i>
+                    <span id="sim-time-badge">Waktu Real-Time</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Panel Simulasi Waktu (Tersembunyi secara default) -->
+        <div id="time-simulator-panel" class="hidden bg-amber-50 border-b border-amber-200 px-4 py-3 text-xs">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                    <span class="font-bold text-amber-900 block"><i class="fa-solid fa-flask mr-1"></i> Mode Uji Jadwal PO (Simulasi Hari & Jam)</span>
+                    <span class="text-amber-700">Coba ganti hari/jam untuk melihat sistem tutup otomatis (H-1 jam 23:59).</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <select id="sim-day-select" onchange="applySimulatedTime()" class="bg-white border border-amber-300 rounded-lg px-2 py-1 text-stone-700 font-medium">
+                        <option value="realtime">Gunakan Waktu Asli Sekarang</option>
+                        <option value="5-20">Jumat, 20:00 (Akhir Pekan Ini)</option>
+                        <option value="5-2359">Jumat, 23:59 (Buka PO Minggu Depan)</option>
+                        <option value="0-15">Minggu, 15:00 (Semua Hari Buka)</option>
+                        <option value="1-08">Senin, 08:00 (Senin Close, Selasa-Jumat Buka)</option>
+                        <option value="2-12">Selasa, 12:00 (Senin-Selasa Close, Rabu-Jumat Buka)</option>
+                        <option value="4-10">Kamis, 10:00 (Hanya Jumat yang Buka)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigasi Tab Pembeli -->
+        <div class="p-4 pb-0">
+            <div class="grid grid-cols-3 gap-1.5 bg-stone-100 p-1.5 rounded-2xl">
+                <button onclick="switchBuyerTab('order')" id="tab-btn-order" class="py-2.5 px-2 rounded-xl text-xs sm:text-sm font-bold transition bg-white text-brand-600 shadow-sm flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-bowl-food"></i> Pesan
+                </button>
+                <button onclick="switchBuyerTab('status')" id="tab-btn-status" class="py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition text-stone-600 hover:text-stone-900 flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-receipt"></i> Cek Pesanan
+                </button>
+                <button onclick="switchBuyerTab('feedback')" id="tab-btn-feedback" class="py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition text-stone-600 hover:text-stone-900 flex items-center justify-center gap-1.5">
+                    <i class="fa-regular fa-comment-dots"></i> Masukan
+                </button>
+            </div>
+        </div>
+
+        <!-- TAB 1: FORM PEMESANAN MAKANAN -->
+        <div id="buyer-tab-order" class="p-4 sm:p-6 flex-1 fade-in">
+            <div class="bg-orange-50/80 border border-orange-100 rounded-2xl p-3.5 mb-5 flex items-start gap-3">
+                <i class="fa-solid fa-circle-info text-brand-600 mt-0.5"></i>
+                <div class="text-xs text-stone-600 leading-relaxed">
+                    <strong class="text-stone-800">Info PO:</strong> Lihat daftar menu mingguan di poster grup ya! Pemesanan tiap hari ditutup otomatis pada <strong class="text-brand-700">H-1 pukul 23:59</strong>. Bisa pesan untuk beberapa hari sekaligus.
+                </div>
+            </div>
+
+            <form id="order-form" onsubmit="submitOrder(event)" class="space-y-6">
+                <!-- Langkah 1: Pilih Hari & Porsi -->
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <label class="font-display font-bold text-stone-800 text-sm sm:text-base flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full bg-brand-600 text-white text-xs flex items-center justify-center">1</span>
+                            Pilih Hari & Jumlah Porsi
+                        </label>
+                        <span id="current-clock-display" class="text-[11px] text-stone-400 font-medium"></span>
+                    </div>
+
+                    <div id="days-selection-list" class="space-y-3">
+                        <!-- Di-render dinamis oleh JS -->
+                    </div>
+                </div>
+
+                <!-- Langkah 2: Data Pembeli -->
+                <div class="pt-2 border-t border-stone-100">
+                    <label class="font-display font-bold text-stone-800 text-sm sm:text-base flex items-center gap-2 mb-3">
+                        <span class="w-6 h-6 rounded-full bg-brand-600 text-white text-xs flex items-center justify-center">2</span>
+                        Data Pemesan
+                    </label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="block text-xs font-semibold text-stone-600 mb-1">Nama Lengkap / Panggilan *</label>
+                            <input type="text" id="buyer-name" required placeholder="Contoh: Raka Pratama"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-stone-600 mb-1">Kelas / Jabatan *</label>
+                            <input type="text" id="buyer-class" required placeholder="Contoh: XI IPA 2 / Guru"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Langkah 3: Ringkasan & Pembayaran -->
+                <div class="pt-2 border-t border-stone-100">
+                    <label class="font-display font-bold text-stone-800 text-sm sm:text-base flex items-center gap-2 mb-3">
+                        <span class="w-6 h-6 rounded-full bg-brand-600 text-white text-xs flex items-center justify-center">3</span>
+                        Pembayaran
+                    </label>
+
+                    <!-- Box Total Tagihan -->
+                    <div class="bg-stone-900 text-white rounded-2xl p-4 mb-4 flex items-center justify-between">
+                        <div>
+                            <div class="text-xs text-stone-400">Total Pesanan (<span id="summary-total-portions">0</span> porsi)</div>
+                            <div class="font-display text-2xl font-extrabold text-amber-400 mt-0.5" id="summary-total-price">Rp 0</div>
+                        </div>
+                        <div class="text-right text-xs text-stone-300">
+                            <div>@ Rp 10.000</div>
+                            <div id="summary-days-count" class="text-stone-400 mt-0.5">0 hari dipilih</div>
+                        </div>
+                    </div>
+
+                    <!-- Pilihan Metode Bayar -->
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="payment-method" value="Cash" checked onchange="togglePaymentMethod('Cash')" class="peer sr-only">
+                            <div class="p-3.5 rounded-2xl border-2 border-stone-200 peer-checked:border-brand-600 peer-checked:bg-orange-50/50 transition flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-base">
+                                    <i class="fa-solid fa-money-bill-wave"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-sm text-stone-800">Cash / Tunai</div>
+                                    <div class="text-[11px] text-stone-500">Bayar langsung</div>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="cursor-pointer">
+                            <input type="radio" name="payment-method" value="QRIS" onchange="togglePaymentMethod('QRIS')" class="peer sr-only">
+                            <div class="p-3.5 rounded-2xl border-2 border-stone-200 peer-checked:border-brand-600 peer-checked:bg-orange-50/50 transition flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-base">
+                                    <i class="fa-solid fa-qrcode"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-sm text-stone-800">QRIS</div>
+                                    <div class="text-[11px] text-stone-500">Scan & upload bukti</div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Area Khusus QRIS -->
+                    <div id="qris-payment-section" class="hidden bg-stone-50 border border-stone-200 rounded-2xl p-4 space-y-4 fade-in">
+                        <div class="text-center">
+                            <span class="inline-block bg-blue-100 text-blue-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full mb-2">SCAN QRIS DAPUR 59</span>
+                            <div class="bg-white p-3 rounded-2xl border border-stone-200 inline-block shadow-sm max-w-[220px] mx-auto">
+                                <img id="buyer-qris-image" src="" alt="QRIS Dapur 59" class="w-44 h-44 object-contain mx-auto rounded-lg">
+                            </div>
+                            <p class="text-xs text-stone-500 mt-2">Silakan scan kode QR di atas sesuai total tagihan, lalu unggah screenshot buktinya di bawah ini.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-stone-700 mb-1.5">Upload Screenshot Bukti Pembayaran *</label>
+                            <label class="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-stone-300 hover:border-brand-500 rounded-xl cursor-pointer bg-white transition overflow-hidden relative">
+                                <div id="qris-upload-placeholder" class="flex flex-col items-center justify-center pt-4 pb-4 text-center px-4">
+                                    <i class="fa-solid fa-cloud-arrow-up text-2xl text-brand-500 mb-1"></i>
+                                    <p class="text-xs text-stone-600 font-medium">Klik untuk pilih gambar bukti transfer</p>
+                                    <p class="text-[10px] text-stone-400 mt-0.5">JPG, PNG, atau Screenshot HP</p>
+                                </div>
+                                <img id="qris-preview-img" class="hidden w-full h-full object-contain bg-stone-900" alt="Preview Bukti">
+                                <input type="file" id="qris-proof-input" accept="image/*" onchange="handleProofUpload(event)" class="hidden">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tombol Submit -->
+                <button type="submit" class="w-full py-4 bg-brand-600 hover:bg-brand-700 active:scale-[0.99] text-white font-bold rounded-2xl shadow-lg shadow-orange-200 transition text-base flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i> Kirim Pesanan Sekarang
+                </button>
+            </form>
+        </div>
+
+        <!-- TAB 2: CEK STATUS PESANAN -->
+        <div id="buyer-tab-status" class="hidden p-4 sm:p-6 flex-1 fade-in">
+            <h2 class="font-display font-bold text-lg text-stone-900 mb-1">Cek Status & Riwayat Pesanan</h2>
+            <p class="text-xs text-stone-500 mb-4">Ketik namamu untuk melihat rincian pesanan yang sudah masuk dan status pembayarannya.</p>
+
+            <div class="flex gap-2 mb-5">
+                <input type="text" id="search-order-name" onkeyup="searchBuyerOrders()" placeholder="Ketik namamu di sini..."
+                    class="flex-1 px-4 py-2.5 rounded-xl border border-stone-300 focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+                <button onclick="searchBuyerOrders()" class="px-4 py-2.5 bg-brand-600 text-white rounded-xl font-semibold text-sm hover:bg-brand-700">
+                    Cari
+                </button>
+            </div>
+
+            <div id="buyer-orders-result" class="space-y-3">
+                <!-- Hasil pencarian pesanan muncul di sini -->
+            </div>
+        </div>
+
+        <!-- TAB 3: MASUKAN & SARAN -->
+        <div id="buyer-tab-feedback" class="hidden p-4 sm:p-6 flex-1 fade-in">
+            <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-5">
+                <h2 class="font-display font-bold text-base text-amber-900 flex items-center gap-2">
+                    <i class="fa-solid fa-heart text-brand-500"></i> Suaramu Berarti Buat Dapur 59!
+                </h2>
+                <p class="text-xs text-amber-800/80 mt-1 leading-relaxed">
+                    Punya ide menu buat minggu depan, saran rasa, atau masukan soal pelayanan? Tulis langsung di bawah ini ya!
+                </p>
+            </div>
+
+            <form onsubmit="submitFeedback(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-stone-600 mb-1">Nama Kamu *</label>
+                    <input type="text" id="fb-name" required placeholder="Contoh: Nabila"
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-stone-600 mb-1">Kelas *</label>
+                    <input type="text" id="fb-class" required placeholder="Contoh: X IPS 1"
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-stone-600 mb-1">Masukan / Request Menu / Saran *</label>
+                    <textarea id="fb-message" rows="4" required placeholder="Contoh: Kak, minggu depan bikinin dimsum mentai atau risoles mayo dong, enak banget pasti!"
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:ring-2 focus:ring-brand-500 outline-none text-sm"></textarea>
+                </div>
+                <button type="submit" class="w-full py-3.5 bg-stone-900 hover:bg-stone-800 text-white font-bold rounded-2xl transition text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i> Kirim Masukan ke Admin
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Struk Digital Setelah Pembeli Sukses Order -->
+    <div id="modal-receipt" class="fixed inset-0 bg-stone-900/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl fade-in">
+            <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-5 text-white text-center relative">
+                <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2 text-2xl">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <h3 class="font-display font-bold text-lg">Pesanan Berhasil Dicatat!</h3>
+                <p class="text-xs text-emerald-100 mt-0.5">Silakan screenshot bukti ini untuk peganganmu</p>
+            </div>
+            <div class="p-5 space-y-3 text-sm" id="receipt-content">
+                <!-- Diisi oleh JS -->
+            </div>
+            <div class="p-4 bg-stone-50 border-t border-stone-100">
+                <button onclick="closeReceiptModal()" class="w-full py-3 bg-stone-900 text-white font-bold rounded-xl text-sm hover:bg-stone-800">
+                    Selesai & Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 3. TAMPILAN ADMIN (DASHBOARD PENGELOLA)    -->
+    <!-- ========================================== -->
+    <div id="view-admin" class="hidden flex-1 flex flex-col max-w-5xl w-full mx-auto bg-white shadow-sm min-h-screen">
+        <!-- Header Admin -->
+        <header class="sticky top-0 z-30 bg-stone-900 text-white px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center font-bold text-white">
+                    59
+                </div>
+                <div>
+                    <h1 class="font-display font-bold text-base sm:text-lg leading-tight">Admin Dapur 59</h1>
+                    <p class="text-[11px] text-stone-400">Panel Pembukuan & Manajemen PO</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openQrisSettingModal()" class="px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-xs font-medium text-amber-300 border border-stone-700 flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-qrcode"></i> <span class="hidden sm:inline">Atur QRIS</span>
+                </button>
+                <button onclick="navigateTo('landing')" class="px-3 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 text-xs font-semibold transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-right-from-bracket"></i> Keluar
+                </button>
+            </div>
+        </header>
+
+        <!-- Menu Utama Admin (2 Pilihan Besar) -->
+        <div class="bg-stone-100 px-4 sm:px-6 pt-4 border-b border-stone-200">
+            <div class="flex gap-2 overflow-x-auto pb-3">
+                <button onclick="switchAdminMainMenu('bookkeeping')" id="admin-nav-bookkeeping" class="px-4 py-2.5 rounded-xl font-bold text-sm bg-brand-600 text-white shadow-sm flex items-center gap-2 whitespace-nowrap transition">
+                    <i class="fa-solid fa-book-open"></i> Pembukuan & Pesanan
+                </button>
+                <button onclick="switchAdminMainMenu('feedbacks')" id="admin-nav-feedbacks" class="px-4 py-2.5 rounded-xl font-semibold text-sm bg-white text-stone-600 hover:text-stone-900 border border-stone-200 flex items-center gap-2 whitespace-nowrap transition">
+                    <i class="fa-solid fa-comments"></i> Masukan & Saran
+                    <span id="admin-feedback-badge" class="bg-brand-100 text-brand-700 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- MENU 1 ADMIN: PEMBUKUAN & PESANAN -->
+        <div id="admin-section-bookkeeping" class="p-4 sm:p-6 flex-1 space-y-6 fade-in">
+            <!-- Sub-Tab: Rekap Harian vs Pembukuan Utama -->
+            <div class="flex flex-wrap items-center justify-between gap-3 bg-stone-50 p-2 rounded-2xl border border-stone-200">
+                <div class="flex gap-1.5 w-full sm:w-auto">
+                    <button onclick="switchBookkeepingSubTab('daily')" id="subtab-daily" class="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white text-stone-900 shadow-sm transition">
+                        <i class="fa-solid fa-calendar-day text-brand-600 mr-1.5"></i> Rekap Harian (Senin - Jumat)
+                    </button>
+                    <button onclick="switchBookkeepingSubTab('ledger')" id="subtab-ledger" class="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-stone-500 hover:text-stone-900 transition">
+                        <i class="fa-solid fa-vault text-emerald-600 mr-1.5"></i> Pembukuan Utama (Arsip)
+                    </button>
+                </div>
+                <button onclick="resetDemoData()" class="text-[11px] text-stone-400 hover:text-red-600 px-2 py-1 transition ml-auto" title="Reset ke data contoh awal">
+                    <i class="fa-solid fa-rotate-left mr-1"></i> Reset Data Contoh
+                </button>
+            </div>
+
+            <!-- SUB-TAB A: REKAP HARIAN (SENIN - JUMAT) -->
+            <div id="bookkeeping-daily-view" class="space-y-5">
+                <!-- Pilihan Hari Senin - Jumat -->
+                <div class="grid grid-cols-5 gap-2" id="admin-day-pills">
+                    <!-- Diisi oleh JS -->
+                </div>
+
+                <!-- Kartu Ringkasan Dapur & Keuangan Hari Terpilih -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div class="bg-orange-50 border border-orange-100 rounded-2xl p-4">
+                        <div class="text-xs text-orange-700 font-semibold flex items-center gap-1.5">
+                            <i class="fa-solid fa-fire-burner"></i> Total Porsi Masak
+                        </div>
+                        <div class="font-display text-2xl sm:text-3xl font-extrabold text-stone-900 mt-1" id="stat-day-portions">0 <span class="text-sm font-normal text-stone-500">porsi</span></div>
+                        <div class="text-[11px] text-orange-600 mt-1">Rekap dapur ibu</div>
+                    </div>
+
+                    <div class="bg-stone-50 border border-stone-200 rounded-2xl p-4">
+                        <div class="text-xs text-stone-600 font-semibold flex items-center gap-1.5">
+                            <i class="fa-solid fa-calculator"></i> Total Tagihan (×10rb)
+                        </div>
+                        <div class="font-display text-xl sm:text-2xl font-extrabold text-stone-900 mt-1" id="stat-day-expected">Rp 0</div>
+                        <div class="text-[11px] text-stone-500 mt-1">Target uang hari ini</div>
+                    </div>
+
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+                        <div class="text-xs text-emerald-700 font-semibold flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-check"></i> Uang Terverifikasi
+                        </div>
+                        <div class="font-display text-xl sm:text-2xl font-extrabold text-emerald-700 mt-1" id="stat-day-verified">Rp 0</div>
+                        <div class="text-[11px] text-emerald-600 mt-1">Cash lunas + QRIS ACC</div>
+                    </div>
+
+                    <div class="bg-rose-50 border border-rose-200 rounded-2xl p-4">
+                        <div class="text-xs text-rose-700 font-semibold flex items-center gap-1.5">
+                            <i class="fa-solid fa-hourglass-half"></i> Belum Lunas / Cek
+                        </div>
+                        <div class="font-display text-xl sm:text-2xl font-extrabold text-rose-700 mt-1" id="stat-day-unpaid">Rp 0</div>
+                        <div class="text-[11px] text-rose-600 mt-1">Selisih yang belum masuk</div>
+                    </div>
+                </div>
+
+                <!-- Header Daftar Pembeli + Tombol Arsipkan Hari -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                    <div>
+                        <h3 class="font-display font-bold text-base text-stone-900" id="admin-selected-day-title">Daftar Pesanan Hari Senin</h3>
+                        <p class="text-xs text-stone-500">Centang Cash jika uang diterima, atau klik Lihat Bukti untuk cek transfer QRIS.</p>
+                    </div>
+                    <button onclick="archiveCurrentDayToLedger()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm flex items-center justify-center gap-2 transition">
+                        <i class="fa-solid fa-box-archive"></i> Tutup Hari & Simpan ke Pembukuan Utama
+                    </button>
+                </div>
+
+                <!-- Daftar Kartu/Tabel Pesanan Hari Terpilih -->
+                <div id="admin-daily-orders-container" class="space-y-3">
+                    <!-- Di-render dinamis oleh JS -->
+                </div>
+            </div>
+
+            <!-- SUB-TAB B: PEMBUKUAN UTAMA (ARSIP JANGKA PANJANG) -->
+            <div id="bookkeeping-ledger-view" class="hidden space-y-5 fade-in">
+                <div class="bg-gradient-to-r from-stone-900 to-stone-800 text-white rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <span class="text-xs uppercase tracking-wider text-amber-400 font-bold">Total Akumulasi Sejak Awal Usaha</span>
+                        <h3 class="font-display text-2xl sm:text-3xl font-extrabold mt-1" id="ledger-grand-total">Rp 0</h3>
+                        <p class="text-xs text-stone-300 mt-1">Total keseluruhan <strong id="ledger-grand-portions" class="text-white">0 porsi</strong> terjual dari seluruh catatan pembukuan.</p>
+                    </div>
+                    <div class="bg-white/10 rounded-2xl p-3.5 text-xs space-y-1 border border-white/10">
+                        <div class="text-stone-300">Status Buku Kas:</div>
+                        <div class="font-bold text-emerald-400 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Tersimpan Otomatis
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="font-display font-bold text-stone-800 text-sm mb-3">Riwayat Rekap Harian & Mingguan (Tersimpan Permanen)</h4>
+                    <div class="overflow-x-auto border border-stone-200 rounded-2xl">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-stone-100 text-stone-600 text-xs uppercase border-b border-stone-200">
+                                    <th class="py-3 px-4 font-bold">Tanggal & Hari</th>
+                                    <th class="py-3 px-4 font-bold">Keterangan / Minggu</th>
+                                    <th class="py-3 px-4 font-bold text-center">Total Porsi</th>
+                                    <th class="py-3 px-4 font-bold text-right">Uang Masuk</th>
+                                    <th class="py-3 px-4 font-bold text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ledger-table-body" class="divide-y divide-stone-100 bg-white">
+                                <!-- Diisi JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MENU 2 ADMIN: MASUKAN & SARAN -->
+        <div id="admin-section-feedbacks" class="hidden p-4 sm:p-6 flex-1 space-y-4 fade-in">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="font-display font-bold text-lg text-stone-900">Kotak Masukan & Saran Pembeli</h2>
+                    <p class="text-xs text-stone-500">Diurutkan berdasarkan waktu pengiriman terbaru.</p>
+                </div>
+            </div>
+
+            <div id="admin-feedback-list" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <!-- Di-render dinamis oleh JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Lihat Bukti QRIS di Admin -->
+    <div id="modal-proof-viewer" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl fade-in">
+            <div class="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
+                <div>
+                    <h3 class="font-display font-bold text-base text-stone-900">Bukti Transfer QRIS</h3>
+                    <p id="proof-modal-subtitle" class="text-xs text-stone-500"></p>
+                </div>
+                <button onclick="closeProofModal()" class="w-8 h-8 rounded-full bg-stone-100 text-stone-600 hover:bg-stone-200 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-4 bg-stone-950 flex items-center justify-center min-h-[260px] max-h-[60vh] overflow-auto">
+                <img id="proof-modal-img" src="" alt="Bukti Pembayaran" class="max-w-full max-h-[55vh] rounded-lg object-contain">
+            </div>
+            <div class="p-4 bg-white border-t border-stone-100 flex gap-2.5">
+                <button onclick="closeProofModal()" class="flex-1 py-2.5 rounded-xl border border-stone-200 text-stone-600 font-semibold text-xs hover:bg-stone-50">Tutup</button>
+                <button id="proof-modal-verify-btn" class="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 shadow-sm flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-check-double"></i> ACC / Tandai Lunas
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Pengaturan Upload Gambar QRIS Toko -->
+    <div id="modal-qris-setting" class="fixed inset-0 bg-stone-900/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl fade-in">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-display font-bold text-lg text-stone-900">Atur Gambar QRIS Toko</h3>
+                <button onclick="closeQrisSettingModal()" class="w-8 h-8 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <p class="text-xs text-stone-500 mb-4">Upload foto kode QRIS milik ibumu di sini. Gambar ini akan langsung tampil saat pembeli memilih pembayaran QRIS.</p>
+            
+            <div class="bg-stone-50 border border-stone-200 rounded-2xl p-3 text-center mb-4">
+                <img id="admin-qris-preview" src="" alt="QRIS Toko" class="w-40 h-40 object-contain mx-auto rounded-lg bg-white p-2 border border-stone-100">
+            </div>
+
+            <label class="w-full py-3 px-4 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs cursor-pointer flex items-center justify-center gap-2 transition">
+                <i class="fa-solid fa-upload"></i> Pilih Gambar QRIS Baru
+                <input type="file" accept="image/*" onchange="handleAdminQrisUpload(event)" class="hidden">
+            </label>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- JAVASCRIPT LOGIC                           -->
+    <!-- ========================================== -->
+    <script>
+        // --- KONSTANTA & STATE APLIKASI ---
+        const PRICE_PER_PORTION = 10000;
+        const ADMIN_PASSWORD = "D@pur59!";
+        const DAYS_LIST = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"];
+
+        // Gambar QRIS Default (SVG Data URI yang bersih agar tidak broken image sebelum admin upload)
+        const DEFAULT_QRIS_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
+            <svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+                <rect width="240" height="240" fill="#ffffff"/>
+                <rect x="12" y="12" width="216" height="216" rx="16" fill="none" stroke="#ea580c" stroke-width="4"/>
+                <text x="120" y="38" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1c1917" text-anchor="middle">QRIS DAPUR 59</text>
+                <g fill="#1c1917" transform="translate(45, 52)">
+                    <rect x="0" y="0" width="42" height="42" fill="none" stroke="#1c1917" stroke-width="6"/>
+                    <rect x="12" y="12" width="18" height="18"/>
+                    <rect x="108" y="0" width="42" height="42" fill="none" stroke="#1c1917" stroke-width="6"/>
+                    <rect x="120" y="12" width="18" height="18"/>
+                    <rect x="0" y="108" width="42" height="42" fill="none" stroke="#1c1917" stroke-width="6"/>
+                    <rect x="12" y="120" width="18" height="18"/>
+                    <rect x="56" y="8" width="12" height="12"/>
+                    <rect x="78" y="8" width="18" height="12"/>
+                    <rect x="56" y="30" width="24" height="12"/>
+                    <rect x="10" y="58" width="18" height="18"/>
+                    <rect x="42" y="58" width="14" height="32"/>
+                    <rect x="68" y="64" width="28" height="14"/>
+                    <rect x="110" y="58" width="28" height="16"/>
+                    <rect x="58" y="96" width="18" height="18"/>
+                    <rect x="88" y="92" width="16" height="36"/>
+                    <rect x="116" y="108" width="28" height="28"/>
+                    <rect x="58" y="128" width="20" height="18"/>
+                </g>
+                <text x="120" y="218" font-family="sans-serif" font-size="10" fill="#78716c" text-anchor="middle">Upload QRIS Asli di Menu Admin</text>
+            </svg>
+        `)}`;
+
+        // Dummy Bukti Transfer SVG
+        const SAMPLE_PROOF_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
+            <svg xmlns="http://www.w3.org/2000/svg" width="300" height="420" viewBox="0 0 300 420">
+                <rect width="300" height="420" fill="#f8fafc"/>
+                <rect x="20" y="20" width="260" height="380" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+                <circle cx="150" cy="75" r="24" fill="#10b981"/>
+                <path d="M140 75 l7 7 l14 -14" stroke="#ffffff" stroke-width="4" fill="none" stroke-linecap="round"/>
+                <text x="150" y="122" font-family="sans-serif" font-size="16" font-weight="bold" fill="#0f172a" text-anchor="middle">Pembayaran Berhasil</text>
+                <text x="150" y="144" font-family="sans-serif" font-size="12" fill="#64748b" text-anchor="middle">QRIS - DAPUR 59</text>
+                <text x="150" y="185" font-family="sans-serif" font-size="24" font-weight="bold" fill="#ea580c" text-anchor="middle">Rp 20.000</text>
+                <line x1="40" y1="215" x2="260" y2="215" stroke="#e2e8f0" stroke-dasharray="4"/>
+                <text x="45" y="245" font-family="sans-serif" font-size="12" fill="#64748b">Pengirim: Alya Putri</text>
+                <text x="45" y="270" font-family="sans-serif" font-size="12" fill="#64748b">Metode: QRIS Mobile</text>
+                <text x="45" y="295" font-family="sans-serif" font-size="12" fill="#64748b">Status: LUNAS (Contoh)</text>
+            </svg>
+        `)}`;
+
+        // State Aplikasi
+        let appData = {
+            orders: [],      // Menyimpan item pesanan per hari: { id, batchId, buyerName, buyerClass, day, portions, note, paymentMethod, proofImg, isPaid, createdAt, weekLabel }
+            feedbacks: [],   // { id, name, buyerClass, message, createdAt }
+            ledger: [],      // Arsip pembukuan utama: { id, dateStr, dayName, description, totalPortions, totalAmount, status }
+            qrisImage: DEFAULT_QRIS_SVG
+        };
+
+        // State UI Sementara
+        let selectedDaysForm = {
+            "Senin": { selected: false, portions: 1, note: "" },
+            "Selasa": { selected: false, portions: 1, note: "" },
+            "Rabu": { selected: false, portions: 1, note: "" },
+            "Kamis": { selected: false, portions: 1, note: "" },
+            "Jumat": { selected: false, portions: 1, note: "" }
+        };
+        let uploadedProofBase64 = "";
+        let adminSelectedDay = "Senin";
+        let simulatedTimeMode = "realtime"; // 'realtime' atau kode seperti '1-08'
+
+        // --- INISIALISASI & PENYIMPANAN LOCALSTORAGE ---
+        function loadAppData() {
+            const saved = localStorage.getItem("dapur59_db_v1");
+            if (saved) {
+                try {
+                    appData = JSON.parse(saved);
+                } catch (e) {
+                    console.error("Gagal membaca database lokal", e);
+                    seedInitialData();
+                }
+            } else {
+                seedInitialData();
+            }
+        }
+
+        function saveAppData() {
+            localStorage.setItem("dapur59_db_v1", JSON.stringify(appData));
+        }
+
+        function seedInitialData() {
+            appData = {
+                qrisImage: DEFAULT_QRIS_SVG,
+                orders: [
+                    {
+                        id: "ORD-101",
+                        batchId: "BATCH-1",
+                        buyerName: "Alya Putri",
+                        buyerClass: "XI IPA 1",
+                        day: "Senin",
+                        portions: 2,
+                        note: "Yang 1 jangan pedes ya kak",
+                        paymentMethod: "QRIS",
+                        proofImg: SAMPLE_PROOF_SVG,
+                        isPaid: true,
+                        createdAt: "Minggu, 19:15"
+                    },
+                    {
+                        id: "ORD-102",
+                        batchId: "BATCH-2",
+                        buyerName: "Dimas Anggara",
+                        buyerClass: "XII IPS 3",
+                        day: "Senin",
+                        portions: 1,
+                        note: "Piscok lumer aja",
+                        paymentMethod: "Cash",
+                        proofImg: "",
+                        isPaid: false,
+                        createdAt: "Minggu, 20:05"
+                    },
+                    {
+                        id: "ORD-103",
+                        batchId: "BATCH-1",
+                        buyerName: "Alya Putri",
+                        buyerClass: "XI IPA 1",
+                        day: "Selasa",
+                        portions: 1,
+                        note: "Saus dipisah",
+                        paymentMethod: "QRIS",
+                        proofImg: SAMPLE_PROOF_SVG,
+                        isPaid: false,
+                        createdAt: "Minggu, 19:15"
+                    },
+                    {
+                        id: "ORD-104",
+                        batchId: "BATCH-3",
+                        buyerName: "Bu Ratna (Guru)",
+                        buyerClass: "Ruang Guru",
+                        day: "Rabu",
+                        portions: 3,
+                        note: "Nasi sarapan semua ya, sambal sedang",
+                        paymentMethod: "Cash",
+                        proofImg: "",
+                        isPaid: true,
+                        createdAt: "Senin, 09:30"
+                    }
+                ],
+                feedbacks: [
+                    {
+                        id: "FB-1",
+                        name: "Siti Rahma",
+                        buyerClass: "X IPA 4",
+                        message: "Kak, risoles mayonya enak banget! Minggu depan adain lagi dong di hari Kamis.",
+                        createdAt: "Minggu, 18:40"
+                    },
+                    {
+                        id: "FB-2",
+                        name: "Bima Sakti",
+                        buyerClass: "XI TKJ 2",
+                        message: "Saran kak, kalau ada menu nasi kuning atau nasi uduk buat sarapan pagi mantap banget sih.",
+                        createdAt: "Sabtu, 14:20"
+                    }
+                ],
+                ledger: [
+                    {
+                        id: "LDG-1",
+                        dateStr: "Minggu Lalu - Senin",
+                        dayName: "Senin",
+                        description: "Arsip PO Minggu ke-3",
+                        totalPortions: 24,
+                        totalAmount: 240000,
+                        status: "Tercatat"
+                    },
+                    {
+                        id: "LDG-2",
+                        dateStr: "Minggu Lalu - Selasa",
+                        dayName: "Selasa",
+                        description: "Arsip PO Minggu ke-3",
+                        totalPortions: 19,
+                        totalAmount: 190000,
+                        status: "Tercatat"
+                    },
+                    {
+                        id: "LDG-3",
+                        dateStr: "Minggu Lalu - Rabu s/d Jumat",
+                        dayName: "Gabungan",
+                        description: "Arsip PO Minggu ke-3 (3 Hari)",
+                        totalPortions: 62,
+                        totalAmount: 620000,
+                        status: "Tercatat"
+                    }
+                ]
+            };
+            saveAppData();
+        }
+
+        function resetDemoData() {
+            seedInitialData();
+            renderAdminDashboard();
+            showToast("Data berhasil dikembalikan ke data contoh awal.", "info");
+        }
+
+        // --- NOTIFIKASI TOAST (PENGGANTI ALERT) ---
+        function showToast(message, type = "success") {
+            const container = document.getElementById("toast-container");
+            const toast = document.createElement("div");
+            
+            const colors = {
+                success: "bg-emerald-600 text-white",
+                error: "bg-rose-600 text-white",
+                info: "bg-stone-800 text-white"
+            };
+            const icons = {
+                success: "fa-circle-check",
+                error: "fa-circle-exclamation",
+                info: "fa-circle-info"
+            };
+
+            toast.className = `${colors[type] || colors.info} px-4 py-3 rounded-2xl shadow-lg flex items-center gap-3 text-xs sm:text-sm font-medium pointer-events-auto fade-in`;
+            toast.innerHTML = `<i class="fa-solid ${icons[type]} text-base"></i> <span class="flex-1">${message}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                toast.style.transition = "opacity 0.3s ease";
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+
+        // --- LOGIKA JADWAL PO OTOMATIS (H-1 JAM 23:59 & RESET JUMAT 23:59) ---
+        /*
+          Aturan:
+          - Hari dalam JS getDay(): 0 = Minggu, 1 = Senin, 2 = Selasa, 3 = Rabu, 4 = Kamis, 5 = Jumat, 6 = Sabtu.
+          - Siklus PO dibuka setiap Jumat malam pukul 23:59 untuk minggu depan.
+          - Saat masuk Jumat >= 23:59 atau Sabtu (6) atau Minggu (0) s/d 23:58: SEMUA hari (Senin - Jumat) BUKA.
+          - Masuk Senin (1): Senin TUTUP (karena lewat Minggu 23:59). Selasa - Jumat BUKA.
+          - Masuk Selasa (2): Senin & Selasa TUTUP. Rabu - Jumat BUKA.
+          - Masuk Rabu (3): Senin - Rabu TUTUP. Kamis & Jumat BUKA.
+          - Masuk Kamis (4): Senin - Kamis TUTUP. Jumat BUKA.
+          - Masuk Jumat (5) sebelum 23:59: Semua (Senin - Jumat minggu ini) TUTUP, menunggu buka PO baru jam 23:59!
+        */
+        function getCurrentEffectiveTime() {
+            if (simulatedTimeMode === "realtime") {
+                const now = new Date();
+                return {
+                    dayOfWeek: now.getDay(),
+                    hours: now.getHours(),
+                    minutes: now.getMinutes(),
+                    label: now.toLocaleDateString("id-ID", { weekday: "long", hour: "2-digit", minute: "2-digit" })
+                };
+            }
+            const map = {
+                "5-20":   { dayOfWeek: 5, hours: 20, minutes: 0,  label: "Simulasi: Jumat, 20:00" },
+                "5-2359": { dayOfWeek: 5, hours: 23, minutes: 59, label: "Simulasi: Jumat, 23:59" },
+                "0-15":   { dayOfWeek: 0, hours: 15, minutes: 0,  label: "Simulasi: Minggu, 15:00" },
+                "1-08":   { dayOfWeek: 1, hours: 8,  minutes: 0,  label: "Simulasi: Senin, 08:00" },
+                "2-12":   { dayOfWeek: 2, hours: 12, minutes: 0,  label: "Simulasi: Selasa, 12:00" },
+                "4-10":   { dayOfWeek: 4, hours: 10, minutes: 0,  label: "Simulasi: Kamis, 10:00" }
+            };
+            return map[simulatedTimeMode];
+        }
+
+        function isDayOpenForPO(targetDayName) {
+            const { dayOfWeek, hours, minutes } = getCurrentEffectiveTime();
+            const targetIndex = DAYS_LIST.indexOf(targetDayName) + 1; // Senin=1, Selasa=2, Rabu=3, Kamis=4, Jumat=5
+
+            // Jika Jumat >= 23:59, Sabtu (6), atau Minggu (0): Semua menu minggu depan terbuka!
+            if (dayOfWeek === 6 || dayOfWeek === 0) {
+                return true;
+            }
+            if (dayOfWeek === 5 && (hours === 23 && minutes >= 59)) {
+                return true;
+            }
+
+            // Jika Senin (1) s/d Jumat (5 sebelum 23:59):
+            // Target hari hanya buka jika targetIndex > dayOfWeek (minimal H-1 sebelum 23:59)
+            return targetIndex > dayOfWeek;
+        }
+
+        function toggleTimeSimulator() {
+            const panel = document.getElementById("time-simulator-panel");
+            panel.classList.toggle("hidden");
+        }
+
+        function applySimulatedTime() {
+            simulatedTimeMode = document.getElementById("sim-day-select").value;
+            const timeInfo = getCurrentEffectiveTime();
+            document.getElementById("sim-time-badge").textContent = simulatedTimeMode === "realtime" ? "Waktu Real-Time" : timeInfo.label;
+            
+            // Reset pilihan hari yang kebetulan jadi close
+            DAYS_LIST.forEach(day => {
+                if (!isDayOpenForPO(day)) {
+                    selectedDaysForm[day].selected = false;
+                }
+            });
+            renderDaysSelection();
+            updateOrderSummary();
+        }
+
+        // --- NAVIGASI HALAMAN ---
+        function navigateTo(view) {
+            document.getElementById("view-landing").classList.add("hidden");
+            document.getElementById("view-buyer").classList.add("hidden");
+            document.getElementById("view-admin").classList.add("hidden");
+
+            if (view === "landing") {
+                document.getElementById("view-landing").classList.remove("hidden");
+            } else if (view === "buyer") {
+                document.getElementById("view-buyer").classList.remove("hidden");
+                document.getElementById("buyer-qris-image").src = appData.qrisImage || DEFAULT_QRIS_SVG;
+                renderDaysSelection();
+                updateOrderSummary();
+            } else if (view === "admin") {
+                document.getElementById("view-admin").classList.remove("hidden");
+                renderAdminDashboard();
+            }
+            window.scrollTo(0, 0);
+        }
+
+        // --- LOGIN ADMIN ---
+        function openAdminModal() {
+            document.getElementById("modal-admin-login").classList.remove("hidden");
+            document.getElementById("modal-admin-login").classList.add("flex");
+            document.getElementById("admin-password-input").value = "";
+            document.getElementById("admin-login-error").classList.add("hidden");
+            setTimeout(() => document.getElementById("admin-password-input").focus(), 100);
+        }
+
+        function closeAdminModal() {
+            document.getElementById("modal-admin-login").classList.add("hidden");
+            document.getElementById("modal-admin-login").classList.remove("flex");
+        }
+
+        function togglePasswordVisibility() {
+            const input = document.getElementById("admin-password-input");
+            const icon = document.getElementById("pw-eye-icon");
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.replace("fa-eye", "fa-eye-slash");
+            } else {
+                input.type = "password";
+                icon.classList.replace("fa-eye-slash", "fa-eye");
+            }
+        }
+
+        function handleAdminLogin(e) {
+            e.preventDefault();
+            const pw = document.getElementById("admin-password-input").value;
+            if (pw === ADMIN_PASSWORD) {
+                closeAdminModal();
+                navigateTo("admin");
+                showToast("Selamat datang kembali, Admin Dapur 59!", "success");
+            } else {
+                document.getElementById("admin-login-error").classList.remove("hidden");
+            }
+        }
+
+        // --- LOGIKA TAMPILAN PEMBELI ---
+        function switchBuyerTab(tab) {
+            const tabs = ["order", "status", "feedback"];
+            tabs.forEach(t => {
+                document.getElementById(`buyer-tab-${t}`).classList.add("hidden");
+                const btn = document.getElementById(`tab-btn-${t}`);
+                btn.className = "py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition text-stone-600 hover:text-stone-900 flex items-center justify-center gap-1.5";
+            });
+
+            document.getElementById(`buyer-tab-${tab}`).classList.remove("hidden");
+            const activeBtn = document.getElementById(`tab-btn-${tab}`);
+            activeBtn.className = "py-2.5 px-2 rounded-xl text-xs sm:text-sm font-bold transition bg-white text-brand-600 shadow-sm flex items-center justify-center gap-1.5";
+
+            if (tab === "status") {
+                searchBuyerOrders();
+            }
+        }
+
+        function renderDaysSelection() {
+            const container = document.getElementById("days-selection-list");
+            const timeInfo = getCurrentEffectiveTime();
+            document.getElementById("current-clock-display").textContent = timeInfo.label;
+
+            const closeDeadlines = {
+                "Senin": "Tutup Minggu 23:59",
+                "Selasa": "Tutup Senin 23:59",
+                "Rabu": "Tutup Selasa 23:59",
+                "Kamis": "Tutup Rabu 23:59",
+                "Jumat": "Tutup Kamis 23:59"
+            };
+
+            container.innerHTML = DAYS_LIST.map(day => {
+                const isOpen = isDayOpenForPO(day);
+                const state = selectedDaysForm[day];
+
+                if (!isOpen) {
+                    return `
+                        <div class="p-3.5 rounded-2xl border border-stone-200 bg-stone-100/80 flex items-center justify-between opacity-75">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-stone-200 text-stone-400 flex items-center justify-center">
+                                    <i class="fa-solid fa-lock text-sm"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-stone-500 text-sm">${day}</div>
+                                    <div class="text-[11px] text-rose-600 font-semibold">Maaf, PO sudah close (untuk minggu depan ya)</div>
+                                </div>
+                            </div>
+                            <span class="text-[10px] font-bold uppercase px-2.5 py-1 rounded-lg bg-stone-200 text-stone-500">Closed</span>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="rounded-2xl border-2 transition-all ${state.selected ? 'border-brand-500 bg-orange-50/40 shadow-sm' : 'border-stone-200 bg-white hover:border-stone-300'}">
+                        <div class="p-3.5 flex items-center justify-between cursor-pointer" onclick="toggleDaySelection('${day}')">
+                            <div class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded-lg flex items-center justify-center border transition ${state.selected ? 'bg-brand-600 border-brand-600 text-white' : 'border-stone-300 bg-white'}">
+                                    ${state.selected ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
+                                </div>
+                                <div>
+                                    <div class="font-bold text-stone-800 text-sm sm:text-base">${day}</div>
+                                    <div class="text-[11px] text-emerald-600 font-medium">
+                                        <i class="fa-regular fa-clock mr-0.5"></i> Open &bull; ${closeDeadlines[day]}
+                                    </div>
+                                </div>
+                            </div>
+
+                            ${state.selected ? `
+                                <div class="flex items-center gap-2 bg-white border border-stone-200 rounded-xl p-1" onclick="event.stopPropagation()">
+                                    <button type="button" onclick="changeDayPortion('${day}', -1)" class="w-7 h-7 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold flex items-center justify-center">-</button>
+                                    <span class="w-6 text-center font-bold text-sm text-stone-900">${state.portions}</span>
+                                    <button type="button" onclick="changeDayPortion('${day}', 1)" class="w-7 h-7 rounded-lg bg-brand-100 hover:bg-brand-200 text-brand-700 font-bold flex items-center justify-center">+</button>
+                                </div>
+                            ` : `
+                                <span class="text-xs font-semibold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-xl">+ Pilih</span>
+                            `}
+                        </div>
+
+                        ${state.selected ? `
+                            <div class="px-3.5 pb-3.5 pt-1 border-t border-orange-100/80">
+                                <input type="text" value="${state.note}" oninput="updateDayNote('${day}', this.value)"
+                                    placeholder="Catatan menu ${day} (misal: jangan pedes, pilih piscok aja)..."
+                                    class="w-full px-3 py-2 rounded-xl bg-white border border-orange-200 focus:ring-2 focus:ring-brand-500 outline-none text-xs text-stone-700">
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function toggleDaySelection(day) {
+            if (!isDayOpenForPO(day)) return;
+            selectedDaysForm[day].selected = !selectedDaysForm[day].selected;
+            renderDaysSelection();
+            updateOrderSummary();
+        }
+
+        function changeDayPortion(day, delta) {
+            const current = selectedDaysForm[day].portions;
+            const next = current + delta;
+            if (next < 1) {
+                selectedDaysForm[day].selected = false;
+            } else if (next <= 50) {
+                selectedDaysForm[day].portions = next;
+            }
+            renderDaysSelection();
+            updateOrderSummary();
+        }
+
+        function updateDayNote(day, val) {
+            selectedDaysForm[day].note = val;
+        }
+
+        function updateOrderSummary() {
+            let totalPortions = 0;
+            let daysCount = 0;
+
+            DAYS_LIST.forEach(day => {
+                if (selectedDaysForm[day].selected) {
+                    totalPortions += selectedDaysForm[day].portions;
+                    daysCount++;
+                }
+            });
+
+            const totalPrice = totalPortions * PRICE_PER_PORTION;
+            document.getElementById("summary-total-portions").textContent = totalPortions;
+            document.getElementById("summary-total-price").textContent = formatRupiah(totalPrice);
+            document.getElementById("summary-days-count").textContent = `${daysCount} hari dipilih`;
+        }
+
+        function togglePaymentMethod(method) {
+            const qrisSection = document.getElementById("qris-payment-section");
+            if (method === "QRIS") {
+                qrisSection.classList.remove("hidden");
+            } else {
+                qrisSection.classList.add("hidden");
+            }
+        }
+
+        function handleProofUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                // Kompres gambar ringan via canvas agar localStorage tidak cepat penuh
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement("canvas");
+                    const maxW = 600;
+                    const scale = Math.min(1, maxW / img.width);
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    uploadedProofBase64 = canvas.toDataURL("image/jpeg", 0.75);
+                    document.getElementById("qris-preview-img").src = uploadedProofBase64;
+                    document.getElementById("qris-preview-img").classList.remove("hidden");
+                    document.getElementById("qris-upload-placeholder").classList.add("hidden");
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function submitOrder(e) {
+            e.preventDefault();
+
+            const chosenDays = DAYS_LIST.filter(day => selectedDaysForm[day].selected);
+            if (chosenDays.length === 0) {
+                showToast("Pilih minimal 1 hari menu terlebih dahulu ya!", "error");
+                return;
+            }
+
+            const buyerName = document.getElementById("buyer-name").value.trim();
+            const buyerClass = document.getElementById("buyer-class").value.trim();
+            const paymentMethod = document.querySelector('input[name="payment-method"]:checked').value;
+
+            if (paymentMethod === "QRIS" && !uploadedProofBase64) {
+                showToast("Silakan upload screenshot bukti pembayaran QRIS terlebih dahulu!", "error");
+                return;
+            }
+
+            const now = new Date();
+            const timeString = now.toLocaleDateString("id-ID", { weekday: "long", hour: "2-digit", minute: "2-digit" });
+            const batchId = "BATCH-" + Date.now();
+
+            let totalPortions = 0;
+            const receiptItems = [];
+
+            chosenDays.forEach((day, idx) => {
+                const item = selectedDaysForm[day];
+                totalPortions += item.portions;
+
+                const newOrder = {
+                    id: "ORD-" + Date.now() + "-" + idx,
+                    batchId: batchId,
+                    buyerName: buyerName,
+                    buyerClass: buyerClass,
+                    day: day,
+                    portions: item.portions,
+                    note: item.note.trim() || "-",
+                    paymentMethod: paymentMethod,
+                    proofImg: paymentMethod === "QRIS" ? uploadedProofBase64 : "",
+                    isPaid: false,
+                    createdAt: timeString
+                };
+                appData.orders.push(newOrder);
+                receiptItems.push(newOrder);
+            });
+
+            saveAppData();
+
+            // Tampilkan Struk Digital
+            showReceiptModal(buyerName, buyerClass, paymentMethod, receiptItems, totalPortions * PRICE_PER_PORTION, timeString);
+
+            // Reset Form
+            DAYS_LIST.forEach(day => {
+                selectedDaysForm[day] = { selected: false, portions: 1, note: "" };
+            });
+            uploadedProofBase64 = "";
+            document.getElementById("order-form").reset();
+            document.getElementById("qris-payment-section").classList.add("hidden");
+            document.getElementById("qris-preview-img").classList.add("hidden");
+            document.getElementById("qris-upload-placeholder").classList.remove("hidden");
+            renderDaysSelection();
+            updateOrderSummary();
+        }
+
+        function showReceiptModal(name, buyerClass, method, items, totalAmount, timeStr) {
+            const content = document.getElementById("receipt-content");
+            content.innerHTML = `
+                <div class="flex justify-between text-xs text-stone-500 border-b border-stone-100 pb-2">
+                    <span>Waktu Pesan</span>
+                    <span class="font-medium text-stone-800">${timeStr}</span>
+                </div>
+                <div class="flex justify-between text-xs text-stone-500">
+                    <span>Nama / Kelas</span>
+                    <span class="font-bold text-stone-900">${escapeHtml(name)} (${escapeHtml(buyerClass)})</span>
+                </div>
+                <div class="flex justify-between text-xs text-stone-500">
+                    <span>Metode Bayar</span>
+                    <span class="font-bold ${method === 'QRIS' ? 'text-blue-600' : 'text-emerald-600'}">${method}</span>
+                </div>
+                <div class="bg-stone-50 rounded-xl p-3 space-y-2 border border-stone-100">
+                    <div class="text-[11px] font-bold uppercase text-stone-400">Rincian Pesanan:</div>
+                    ${items.map(it => `
+                        <div class="flex justify-between items-start text-xs">
+                            <div>
+                                <span class="font-bold text-stone-800">${it.day}</span> (${it.portions} porsi)
+                                ${it.note !== '-' ? `<div class="text-[11px] text-stone-500 italic">"${escapeHtml(it.note)}"</div>` : ''}
+                            </div>
+                            <span class="font-semibold text-stone-700">${formatRupiah(it.portions * PRICE_PER_PORTION)}</span>
+                        </div>
+                    `).join("")}
+                </div>
+                <div class="flex justify-between items-center pt-2 border-t border-dashed border-stone-300">
+                    <span class="font-bold text-stone-700">Total Tagihan</span>
+                    <span class="font-display font-extrabold text-lg text-brand-600">${formatRupiah(totalAmount)}</span>
+                </div>
+            `;
+            document.getElementById("modal-receipt").classList.remove("hidden");
+            document.getElementById("modal-receipt").classList.add("flex");
+        }
+
+        function closeReceiptModal() {
+            document.getElementById("modal-receipt").classList.add("hidden");
+            document.getElementById("modal-receipt").classList.remove("flex");
+        }
+
+        // --- CEK STATUS PESANAN PEMBELI ---
+        function searchBuyerOrders() {
+            const query = document.getElementById("search-order-name").value.trim().toLowerCase();
+            const container = document.getElementById("buyer-orders-result");
+
+            let filtered = appData.orders;
+            if (query) {
+                filtered = appData.orders.filter(o => o.buyerName.toLowerCase().includes(query));
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 bg-stone-50 rounded-2xl border border-stone-200">
+                        <i class="fa-solid fa-magnifying-glass text-2xl text-stone-300 mb-2"></i>
+                        <p class="text-xs text-stone-500">Belum ada data pesanan yang cocok dengan pencarianmu.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Tampilkan terbaru di atas
+            const reversed = [...filtered].reverse();
+            container.innerHTML = reversed.map(o => `
+                <div class="p-4 rounded-2xl border border-stone-200 bg-white shadow-sm flex items-center justify-between gap-3">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-sm text-stone-900">${escapeHtml(o.buyerName)}</span>
+                            <span class="text-[11px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded-md font-medium">${escapeHtml(o.buyerClass)}</span>
+                        </div>
+                        <div class="text-xs text-brand-600 font-bold mt-1">
+                            Hari ${o.day} &bull; ${o.portions} Porsi (${formatRupiah(o.portions * PRICE_PER_PORTION)})
+                        </div>
+                        ${o.note && o.note !== '-' ? `<div class="text-[11px] text-stone-500 mt-0.5">Catatan: "${escapeHtml(o.note)}"</div>` : ''}
+                    </div>
+                    <div class="text-right">
+                        <span class="inline-block text-[10px] font-bold px-2.5 py-1 rounded-full ${o.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">
+                            ${o.isPaid ? '<i class="fa-solid fa-check mr-1"></i> Lunas / ACC' : '<i class="fa-regular fa-clock mr-1"></i> Menunggu Cek'}
+                        </span>
+                        <div class="text-[10px] text-stone-400 mt-1">${o.paymentMethod}</div>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        // --- KIRIM MASUKAN & SARAN ---
+        function submitFeedback(e) {
+            e.preventDefault();
+            const name = document.getElementById("fb-name").value.trim();
+            const buyerClass = document.getElementById("fb-class").value.trim();
+            const message = document.getElementById("fb-message").value.trim();
+
+            const now = new Date();
+            const timeString = now.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+            appData.feedbacks.unshift({
+                id: "FB-" + Date.now(),
+                name,
+                buyerClass,
+                message,
+                createdAt: timeString
+            });
+            saveAppData();
+
+            e.target.reset();
+            showToast("Terima kasih! Masukanmu sudah terkirim ke Admin.", "success");
+        }
+
+        // --- LOGIKA DASHBOARD ADMIN ---
+        function renderAdminDashboard() {
+            document.getElementById("admin-feedback-badge").textContent = appData.feedbacks.length;
+            renderAdminDayPills();
+            renderAdminDailyOrders();
+            renderAdminLedger();
+            renderAdminFeedbacks();
+        }
+
+        function switchAdminMainMenu(menu) {
+            const isBook = menu === "bookkeeping";
+            document.getElementById("admin-section-bookkeeping").classList.toggle("hidden", !isBook);
+            document.getElementById("admin-section-feedbacks").classList.toggle("hidden", isBook);
+
+            document.getElementById("admin-nav-bookkeeping").className = isBook
+                ? "px-4 py-2.5 rounded-xl font-bold text-sm bg-brand-600 text-white shadow-sm flex items-center gap-2 whitespace-nowrap transition"
+                : "px-4 py-2.5 rounded-xl font-semibold text-sm bg-white text-stone-600 hover:text-stone-900 border border-stone-200 flex items-center gap-2 whitespace-nowrap transition";
+
+            document.getElementById("admin-nav-feedbacks").className = !isBook
+                ? "px-4 py-2.5 rounded-xl font-bold text-sm bg-brand-600 text-white shadow-sm flex items-center gap-2 whitespace-nowrap transition"
+                : "px-4 py-2.5 rounded-xl font-semibold text-sm bg-white text-stone-600 hover:text-stone-900 border border-stone-200 flex items-center gap-2 whitespace-nowrap transition";
+        }
+
+        function switchBookkeepingSubTab(subtab) {
+            const isDaily = subtab === "daily";
+            document.getElementById("bookkeeping-daily-view").classList.toggle("hidden", !isDaily);
+            document.getElementById("bookkeeping-ledger-view").classList.toggle("hidden", isDaily);
+
+            document.getElementById("subtab-daily").className = isDaily
+                ? "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white text-stone-900 shadow-sm transition"
+                : "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-stone-500 hover:text-stone-900 transition";
+
+            document.getElementById("subtab-ledger").className = !isDaily
+                ? "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white text-stone-900 shadow-sm transition"
+                : "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-stone-500 hover:text-stone-900 transition";
+        }
+
+        function renderAdminDayPills() {
+            const container = document.getElementById("admin-day-pills");
+            container.innerHTML = DAYS_LIST.map(day => {
+                const countPortions = appData.orders
+                    .filter(o => o.day === day)
+                    .reduce((sum, o) => sum + o.portions, 0);
+                const isSelected = adminSelectedDay === day;
+
+                return `
+                    <button onclick="selectAdminDay('${day}')" class="py-2.5 px-1 sm:px-3 rounded-2xl border text-center transition flex flex-col items-center justify-center ${
+                        isSelected
+                            ? "bg-stone-900 text-white border-stone-900 shadow-md"
+                            : "bg-white text-stone-700 border-stone-200 hover:border-brand-400"
+                    }">
+                        <span class="text-xs sm:text-sm font-bold">${day}</span>
+                        <span class="text-[10px] mt-0.5 px-1.5 py-0.2 rounded-full ${
+                            isSelected ? "bg-brand-500 text-white" : "bg-stone-100 text-stone-500"
+                        }">${countPortions} porsi</span>
+                    </button>
+                `;
+            }).join("");
+        }
+
+        function selectAdminDay(day) {
+            adminSelectedDay = day;
+            renderAdminDayPills();
+            renderAdminDailyOrders();
+        }
+
+        function renderAdminDailyOrders() {
+            const dayOrders = appData.orders.filter(o => o.day === adminSelectedDay);
+            document.getElementById("admin-selected-day-title").textContent = `Daftar Pesanan Hari ${adminSelectedDay}`;
+
+            // Kalkulasi Statistik
+            const totalPortions = dayOrders.reduce((sum, o) => sum + o.portions, 0);
+            const expectedMoney = totalPortions * PRICE_PER_PORTION;
+            const verifiedMoney = dayOrders
+                .filter(o => o.isPaid)
+                .reduce((sum, o) => sum + (o.portions * PRICE_PER_PORTION), 0);
+            const unpaidMoney = expectedMoney - verifiedMoney;
+
+            document.getElementById("stat-day-portions").innerHTML = `${totalPortions} <span class="text-sm font-normal text-stone-500">porsi</span>`;
+            document.getElementById("stat-day-expected").textContent = formatRupiah(expectedMoney);
+            document.getElementById("stat-day-verified").textContent = formatRupiah(verifiedMoney);
+            document.getElementById("stat-day-unpaid").textContent = formatRupiah(unpaidMoney);
+
+            const container = document.getElementById("admin-daily-orders-container");
+            if (dayOrders.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-stone-50 border border-dashed border-stone-300 rounded-2xl p-8 text-center">
+                        <i class="fa-solid fa-basket-shopping text-3xl text-stone-300 mb-2"></i>
+                        <p class="text-sm font-semibold text-stone-600">Belum ada pesanan untuk hari ${adminSelectedDay}</p>
+                        <p class="text-xs text-stone-400 mt-1">Pesanan pembeli yang memilih hari ${adminSelectedDay} akan otomatis muncul di sini.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = dayOrders.map(order => {
+                const subtotal = order.portions * PRICE_PER_PORTION;
+                return `
+                    <div class="bg-white border ${order.isPaid ? 'border-emerald-200 bg-emerald-50/10' : 'border-stone-200'} rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition">
+                        <div class="space-y-1.5 flex-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="font-display font-bold text-stone-900 text-base">${escapeHtml(order.buyerName)}</span>
+                                <span class="text-xs font-semibold bg-stone-100 text-stone-700 px-2.5 py-0.5 rounded-lg">${escapeHtml(order.buyerClass)}</span>
+                                <span class="text-xs font-bold bg-orange-100 text-brand-700 px-2.5 py-0.5 rounded-lg">${order.portions} Porsi &bull; ${formatRupiah(subtotal)}</span>
+                            </div>
+
+                            <div class="text-xs text-stone-600 bg-stone-50 border border-stone-100 rounded-xl px-3 py-2 flex items-start gap-2">
+                                <i class="fa-regular fa-note-sticky text-brand-500 mt-0.5"></i>
+                                <span><strong class="text-stone-700">Catatan:</strong> ${escapeHtml(order.note)}</span>
+                            </div>
+                        </div>
+
+                        <!-- Kontrol Pembayaran & Verifikasi -->
+                        <div class="flex items-center justify-between sm:justify-end gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-100">
+                            ${order.paymentMethod === "QRIS" ? `
+                                <button onclick="openProofModal('${order.id}')" class="px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold flex items-center gap-1.5 transition">
+                                    <i class="fa-solid fa-image"></i> Lihat Bukti QRIS
+                                </button>
+                            ` : `
+                                <span class="px-3 py-2 rounded-xl bg-stone-100 text-stone-700 text-xs font-bold flex items-center gap-1.5">
+                                    <i class="fa-solid fa-money-bill"></i> Cash
+                                </span>
+                            `}
+
+                            <button onclick="toggleOrderPaidStatus('${order.id}')" class="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
+                                order.isPaid
+                                    ? "bg-emerald-600 text-white shadow-sm"
+                                    : "bg-white border-2 border-stone-300 text-stone-600 hover:border-emerald-500 hover:text-emerald-600"
+                            }">
+                                <i class="fa-solid ${order.isPaid ? 'fa-square-check' : 'fa-square'}"></i>
+                                ${order.isPaid ? "Sudah Bayar" : "Tandai Lunas"}
+                            </button>
+
+                            <button onclick="deleteOrder('${order.id}')" class="w-8 h-8 rounded-xl text-stone-400 hover:bg-rose-50 hover:text-rose-600 flex items-center justify-center transition" title="Hapus pesanan">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function toggleOrderPaidStatus(orderId) {
+            const idx = appData.orders.findIndex(o => o.id === orderId);
+            if (idx !== -1) {
+                appData.orders[idx].isPaid = !appData.orders[idx].isPaid;
+                saveAppData();
+                renderAdminDailyOrders();
+                showToast(appData.orders[idx].isPaid ? "Pembayaran ditandai LUNAS!" : "Status lunas dibatalkan.", "info");
+            }
+        }
+
+        function deleteOrder(orderId) {
+            appData.orders = appData.orders.filter(o => o.id !== orderId);
+            saveAppData();
+            renderAdminDayPills();
+            renderAdminDailyOrders();
+            showToast("Pesanan berhasil dihapus.", "info");
+        }
+
+        // --- MODAL BUKTI QRIS ADMIN ---
+        function openProofModal(orderId) {
+            const order = appData.orders.find(o => o.id === orderId);
+            if (!order) return;
+
+            document.getElementById("proof-modal-subtitle").textContent = `${order.buyerName} (${order.buyerClass}) - ${order.portions} Porsi (${formatRupiah(order.portions * PRICE_PER_PORTION)})`;
+            document.getElementById("proof-modal-img").src = order.proofImg || SAMPLE_PROOF_SVG;
+
+            const verifyBtn = document.getElementById("proof-modal-verify-btn");
+            if (order.isPaid) {
+                verifyBtn.innerHTML = `<i class="fa-solid fa-check"></i> Sudah Terverifikasi`;
+                verifyBtn.className = "flex-1 py-2.5 rounded-xl bg-stone-200 text-stone-700 font-bold text-xs flex items-center justify-center gap-1.5";
+            } else {
+                verifyBtn.innerHTML = `<i class="fa-solid fa-check-double"></i> ACC / Tandai Lunas`;
+                verifyBtn.className = "flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 shadow-sm flex items-center justify-center gap-1.5";
+            }
+
+            verifyBtn.onclick = function() {
+                if (!order.isPaid) {
+                    toggleOrderPaidStatus(orderId);
+                }
+                closeProofModal();
+            };
+
+            document.getElementById("modal-proof-viewer").classList.remove("hidden");
+            document.getElementById("modal-proof-viewer").classList.add("flex");
+        }
+
+        function closeProofModal() {
+            document.getElementById("modal-proof-viewer").classList.add("hidden");
+            document.getElementById("modal-proof-viewer").classList.remove("flex");
+        }
+
+        // --- ARSIPKAN KE PEMBUKUAN UTAMA ---
+        function archiveCurrentDayToLedger() {
+            const dayOrders = appData.orders.filter(o => o.day === adminSelectedDay);
+            if (dayOrders.length === 0) {
+                showToast(`Tidak ada pesanan di hari ${adminSelectedDay} untuk diarsipkan.`, "error");
+                return;
+            }
+
+            const totalPortions = dayOrders.reduce((sum, o) => sum + o.portions, 0);
+            const verifiedMoney = dayOrders
+                .filter(o => o.isPaid)
+                .reduce((sum, o) => sum + (o.portions * PRICE_PER_PORTION), 0);
+
+            const now = new Date();
+            const dateLabel = now.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+
+            appData.ledger.unshift({
+                id: "LDG-" + Date.now(),
+                dateStr: `${dateLabel} (${adminSelectedDay})`,
+                dayName: adminSelectedDay,
+                description: `Rekap Selesai Hari ${adminSelectedDay} (${dayOrders.length} pemesan)`,
+                totalPortions: totalPortions,
+                totalAmount: verifiedMoney,
+                status: "Tercatat"
+            });
+
+            // Bersihkan daftar harian tersebut karena sudah pindah ke Pembukuan Utama
+            appData.orders = appData.orders.filter(o => o.day !== adminSelectedDay);
+            saveAppData();
+
+            renderAdminDayPills();
+            renderAdminDailyOrders();
+            renderAdminLedger();
+            showToast(`Rekap hari ${adminSelectedDay} berhasil dipindahkan ke Pembukuan Utama!`, "success");
+        }
+
+        function renderAdminLedger() {
+            const tbody = document.getElementById("ledger-table-body");
+            
+            // Hitung total dari arsip permanen + pesanan aktif yang sudah lunas
+            const archivedPortions = appData.ledger.reduce((s, item) => s + item.totalPortions, 0);
+            const archivedMoney = appData.ledger.reduce((s, item) => s + item.totalAmount, 0);
+
+            const activePaidPortions = appData.orders.filter(o => o.isPaid).reduce((s, o) => s + o.portions, 0);
+            const activePaidMoney = activePaidPortions * PRICE_PER_PORTION;
+
+            document.getElementById("ledger-grand-total").textContent = formatRupiah(archivedMoney + activePaidMoney);
+            document.getElementById("ledger-grand-portions").textContent = `${archivedPortions + activePaidPortions} porsi`;
+
+            if (appData.ledger.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-stone-400 text-xs">Belum ada arsip pembukuan utama.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = appData.ledger.map(item => `
+                <tr class="hover:bg-stone-50 transition">
+                    <td class="py-3.5 px-4 font-semibold text-stone-800 whitespace-nowrap">${escapeHtml(item.dateStr)}</td>
+                    <td class="py-3.5 px-4 text-stone-600">${escapeHtml(item.description)}</td>
+                    <td class="py-3.5 px-4 text-center font-bold text-stone-800">${item.totalPortions} porsi</td>
+                    <td class="py-3.5 px-4 text-right font-bold text-emerald-700">${formatRupiah(item.totalAmount)}</td>
+                    <td class="py-3.5 px-4 text-center">
+                        <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700">${item.status}</span>
+                    </td>
+                </tr>
+            `).join("");
+        }
+
+        // --- MASUKAN & SARAN DI ADMIN ---
+        function renderAdminFeedbacks() {
+            const container = document.getElementById("admin-feedback-list");
+            if (appData.feedbacks.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full bg-stone-50 border border-dashed border-stone-300 rounded-2xl p-8 text-center">
+                        <p class="text-sm text-stone-500">Belum ada masukan atau saran dari pembeli.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = appData.feedbacks.map(fb => `
+                <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between gap-3">
+                    <div>
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 font-bold text-xs flex items-center justify-center">
+                                    ${escapeHtml(fb.name.charAt(0).toUpperCase())}
+                                </div>
+                                <div>
+                                    <div class="font-bold text-sm text-stone-900 leading-none">${escapeHtml(fb.name)}</div>
+                                    <div class="text-[11px] text-stone-500 mt-0.5">${escapeHtml(fb.buyerClass)}</div>
+                                </div>
+                            </div>
+                            <span class="text-[10px] text-stone-400 bg-stone-100 px-2 py-1 rounded-lg">${escapeHtml(fb.createdAt)}</span>
+                        </div>
+                        <p class="text-xs sm:text-sm text-stone-700 bg-amber-50/60 border border-amber-100/80 p-3 rounded-xl leading-relaxed">
+                            "${escapeHtml(fb.message)}"
+                        </p>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        // --- PENGATURAN QRIS ADMIN ---
+        function openQrisSettingModal() {
+            document.getElementById("admin-qris-preview").src = appData.qrisImage || DEFAULT_QRIS_SVG;
+            document.getElementById("modal-qris-setting").classList.remove("hidden");
+            document.getElementById("modal-qris-setting").classList.add("flex");
+        }
+
+        function closeQrisSettingModal() {
+            document.getElementById("modal-qris-setting").classList.add("hidden");
+            document.getElementById("modal-qris-setting").classList.remove("flex");
+        }
+
+        function handleAdminQrisUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement("canvas");
+                    const maxW = 500;
+                    const scale = Math.min(1, maxW / img.width);
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    appData.qrisImage = canvas.toDataURL("image/png");
+                    saveAppData();
+                    document.getElementById("admin-qris-preview").src = appData.qrisImage;
+                    showToast("Gambar QRIS Dapur 59 berhasil diperbarui!", "success");
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- HELPER FORMATTING ---
+        function formatRupiah(num) {
+            return "Rp " + num.toLocaleString("id-ID");
+        }
+
+        function escapeHtml(text) {
+            if (!text) return "";
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Jalankan saat halaman dimuat
+        window.addEventListener("DOMContentLoaded", () => {
+            loadAppData();
+        });
+    </script>
+</body>
+</html>
