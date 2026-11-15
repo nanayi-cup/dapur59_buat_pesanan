@@ -3,70 +3,1337 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dapur 59 - Pre-Order Makanan</title>
-    <!-- Tailwind CSS untuk Desain -->
+    <title>Dapur 59 - Sistem PO Makanan & Pembukuan</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-        // Konfigurasi Firebase Dapur 59 kamu
-        const firebaseConfig = {
-          apiKey: "AIzaSyAQBilqj580vJYJuAYAZk6jt9RKbFLJb3c",
-          authDomain: "dapur59-47a5a.firebaseapp.com",
-          projectId: "dapur59-47a5a",
-          storageBucket: "dapur59-47a5a.firebasestorage.app",
-          messagingSenderId: "658361629913",
-          appId: "1:658361629913:web:b0ca8491bc6bd5bd6a52c8"
-        };
-
-        // Inisialisasi Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // Contoh fungsi global untuk menyimpan pesanan ke Firestore
-        window.kirimPesanan = async function(dataPesanan) {
-            try {
-                await addDoc(collection(db, "pesanan"), dataPesanan);
-                alert("Pesanan berhasil dikirim ke Dapur 59!");
-            } catch (e) {
-                console.error("Gagal mengirim pesanan: ", e);
-                alert("Terjadi kesalahan saat mengirim pesanan.");
-            }
-        };
-    </script>
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #faf8f5;
+            color: #1e293b;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+    </style>
 </head>
-<body class="bg-orange-50 font-sans">
-    <div class="max-w-md mx-auto min-h-screen bg-white shadow-lg flex flex-col justify-between">
-        <!-- Header -->
-        <header class="bg-orange-600 text-white p-4 text-center shadow-md">
-            <h1 class="text-2xl font-bold">Dapur 59</h1>
-            <p class="text-sm text-orange-100">Pemesanan Makanan & Lezat Berkualitas</p>
-        </header>
+<body class="min-h-screen flex flex-col selection:bg-orange-200 selection:text-orange-900">
 
-        <!-- Konten Utama -->
-        <main class="p-4 flex-grow">
-            <div class="bg-orange-100 p-4 rounded-xl text-center mb-4">
-                <h2 class="font-bold text-orange-800 text-lg">Selamat Datang!</h2>
-                <p class="text-sm text-orange-700 mt-1">Silakan pilih menu lezat buatan Dapur 59 di bawah ini.</p>
+    <!-- Toast Notification Container (Pengganti alert()) -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- Top Navigation Bar (Muncul saat di halaman Pembeli atau Admin) -->
+    <header id="top-navbar" class="hidden sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-orange-100 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 cursor-pointer" onclick="navigateTo('landing')">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white flex items-center justify-center shadow-md shadow-orange-200">
+                    <i class="fa-solid fa-utensils text-sm"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-base sm:text-lg text-slate-900 leading-tight">Dapur 59</h1>
+                    <p id="nav-subtitle" class="text-[11px] font-medium text-orange-600">Portal Pemesanan</p>
+                </div>
             </div>
-            
-            <div id="menu-container" class="space-y-3">
-                <!-- Daftar Menu Akan Muncul Di Sini -->
-                <div class="p-3 border rounded-lg flex justify-between items-center bg-white shadow-sm">
-                    <div>
-                        <h3 class="font-semibold text-gray-800">Menu Spesial Dapur 59</h3>
-                        <p class="text-sm text-gray-500">Silakan update menu sesukamu</p>
+
+            <div class="flex items-center gap-2">
+                <button onclick="navigateTo('landing')" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 hover:text-orange-600 hover:bg-orange-50 transition flex items-center gap-1.5 border border-slate-200">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Beranda</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex flex-col">
+
+        <!-- ========================================== -->
+        <!-- 1. HALAMAN UTAMA (LANDING PAGE)            -->
+        <!-- ========================================== -->
+        <section id="view-landing" class="flex-1 flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-orange-50 via-amber-50/40 to-stone-100">
+            <div class="max-w-xl w-full animate-fade-in">
+                <div class="bg-white rounded-3xl shadow-xl shadow-orange-900/5 border border-orange-100/80 p-6 sm:p-10 text-center relative overflow-hidden">
+                    <!-- Decorative top accent -->
+                    <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600"></div>
+
+                    <!-- Brand Logo -->
+                    <div class="w-20 h-20 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white flex items-center justify-center shadow-lg shadow-orange-500/30 transform -rotate-3">
+                        <i class="fa-solid fa-bowl-food text-3xl"></i>
+                    </div>
+
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700 mb-3">
+                        <i class="fa-solid fa-fire-flame-curved"></i> Sistem Pre-Order H-1 & Pembukuan
+                    </span>
+
+                    <h1 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-2">
+                        Dapur 59
+                    </h1>
+                    <p class="text-slate-500 text-sm sm:text-base max-w-md mx-auto mb-8 leading-relaxed">
+                        Pesan menu rumahan favoritmu lebih awal untuk bekal sekolah/kampus, atau sampaikan masukan langsung untuk kami.
+                    </p>
+
+                    <!-- Dual Action Buttons -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Tombol Pembeli -->
+                        <button onclick="navigateTo('buyer')" class="group relative flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+                            <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-bag-shopping text-xl"></i>
+                            </div>
+                            <span class="font-bold text-lg">Pembeli</span>
+                            <span class="text-xs text-orange-100 mt-1">Pesan Makanan & Saran</span>
+                        </button>
+
+                        <!-- Tombol Admin -->
+                        <button onclick="openAdminLoginModal()" class="group relative flex flex-col items-center justify-center p-6 rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/20 hover:bg-slate-800 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+                            <div class="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-lock text-xl text-amber-400"></i>
+                            </div>
+                            <span class="font-bold text-lg">Admin</span>
+                            <span class="text-xs text-slate-400 mt-1">Rekap PO & Pembukuan</span>
+                        </button>
+                    </div>
+
+                    <!-- Info Footer -->
+                    <div class="mt-8 pt-5 border-t border-slate-100 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-400">
+                        <span class="flex items-center gap-1.5"><i class="fa-regular fa-clock text-orange-500"></i> Buka PO: Jumat 23:59</span>
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-hourglass-end text-orange-500"></i> Close Order: H-1 Pukul 23:59</span>
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-tag text-orange-500"></i> Rp10.000 / Porsi</span>
                     </div>
                 </div>
             </div>
-        </main>
+        </section>
 
-        <!-- Footer -->
-        <footer class="bg-gray-100 text-center p-3 text-xs text-gray-500 border-t">
-            &copy; 2026 Dapur 59 - Terhubung secara Real-Time
-        </footer>
-    </div>
+        <!-- ========================================== -->
+        <!-- 2. SISI PEMBELI (BUYER PORTAL)             -->
+        <!-- ========================================== -->
+        <section id="view-buyer" class="hidden flex-1 max-w-4xl w-full mx-auto px-4 py-6 sm:py-8 animate-fade-in">
+            
+            <!-- Simulator Waktu Banner (Untuk mempermudah pengetesan aturan H-1) -->
+            <div class="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-start sm:items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-700 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-amber-900">Mode Waktu Sistem (Aturan PO H-1 23:59)</p>
+                        <p id="active-sim-time-label" class="text-xs text-amber-700">Memuat waktu sistem...</p>
+                    </div>
+                </div>
+                <select id="time-simulator-select" onchange="handleTimeSimulationChange(this.value)" class="text-xs font-semibold bg-white border border-amber-300 text-slate-800 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    <option value="week_open">Simulasi: Minggu Malam (Semua PO Buka)</option>
+                    <option value="tue_noon">Simulasi: Selasa Siang (Senin & Selasa Close)</option>
+                    <option value="thu_night">Simulasi: Kamis 23:59 (Hanya Jumat Buka)</option>
+                    <option value="realtime">Waktu Nyata Perangkat Sekarang</option>
+                </select>
+            </div>
+
+            <!-- Buyer Sub-Navigation Tabs -->
+            <div class="grid grid-cols-2 gap-2 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-sm mb-6">
+                <button id="tab-btn-order" onclick="switchBuyerTab('order')" class="py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all bg-orange-500 text-white shadow-sm">
+                    <i class="fa-solid fa-utensils"></i>
+                    <span>Pemesanan Makanan</span>
+                </button>
+                <button id="tab-btn-feedback" onclick="switchBuyerTab('feedback')" class="py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all text-slate-600 hover:bg-slate-50">
+                    <i class="fa-solid fa-comment-dots"></i>
+                    <span>Masukan & Saran</span>
+                </button>
+            </div>
+
+            <!-- TAB A: PEMESANAN MAKANAN -->
+            <div id="buyer-tab-order" class="space-y-6">
+                
+                <!-- Form Pemesanan -->
+                <form id="order-form" onsubmit="submitOrder(event)" class="space-y-6">
+                    
+                    <!-- Step 1: Pilih Hari & Porsi -->
+                    <div class="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-sm">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-orange-600">Langkah 1</span>
+                                <h2 class="text-lg sm:text-xl font-extrabold text-slate-900">Pilih Hari & Jumlah Porsi</h2>
+                            </div>
+                            <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full">
+                                <i class="fa-solid fa-circle-info text-orange-500"></i> Bisa pilih lebih dari 1 hari
+                            </span>
+                        </div>
+
+                        <!-- Container Kartu Hari Senin - Jumat -->
+                        <div id="days-selection-container" class="space-y-3">
+                            <!-- Di-render secara dinamis oleh JS -->
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Identitas Pembeli -->
+                    <div class="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-sm">
+                        <span class="text-xs font-bold uppercase tracking-wider text-orange-600">Langkah 2</span>
+                        <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 mb-4">Data Pemesan</h2>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Lengkap <span class="text-red-500">*</span></label>
+                                <input type="text" id="buyer-name" required placeholder="Contoh: Raka Pratama" class="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">Kelas <span class="text-red-500">*</span></label>
+                                <input type="text" id="buyer-class" required placeholder="Contoh: XI IPA 2 / X-3" class="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Ringkasan & Metode Pembayaran -->
+                    <div class="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-sm">
+                        <span class="text-xs font-bold uppercase tracking-wider text-orange-600">Langkah 3</span>
+                        <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 mb-4">Metode Pembayaran</h2>
+
+                        <!-- Ringkasan Tagihan -->
+                        <div class="bg-orange-50/80 border border-orange-200/80 rounded-2xl p-4 mb-5 flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-600">Total Porsi Dipilih</p>
+                                <p id="summary-total-portions" class="text-lg font-extrabold text-slate-900">0 Porsi</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs font-semibold text-slate-600">Total Pembayaran (@Rp10.000)</p>
+                                <p id="summary-total-price" class="text-xl sm:text-2xl font-extrabold text-orange-600">Rp0</p>
+                            </div>
+                        </div>
+
+                        <!-- Pilihan Cash / QRIS -->
+                        <div class="grid grid-cols-2 gap-3 mb-5">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="payment_method" value="Cash" checked onchange="togglePaymentMethod('Cash')" class="peer sr-only">
+                                <div class="p-4 rounded-2xl border-2 border-slate-200 peer-checked:border-orange-500 peer-checked:bg-orange-50/40 transition flex flex-col items-center text-center gap-1.5">
+                                    <i class="fa-solid fa-money-bill-wave text-2xl text-emerald-600"></i>
+                                    <span class="font-bold text-sm text-slate-900">Cash (Tunai)</span>
+                                    <span class="text-[11px] text-slate-500">Bayar langsung</span>
+                                </div>
+                            </label>
+
+                            <label class="cursor-pointer">
+                                <input type="radio" name="payment_method" value="QRIS" onchange="togglePaymentMethod('QRIS')" class="peer sr-only">
+                                <div class="p-4 rounded-2xl border-2 border-slate-200 peer-checked:border-orange-500 peer-checked:bg-orange-50/40 transition flex flex-col items-center text-center gap-1.5">
+                                    <i class="fa-solid fa-qrcode text-2xl text-blue-600"></i>
+                                    <span class="font-bold text-sm text-slate-900">QRIS</span>
+                                    <span class="text-[11px] text-slate-500">Scan & Upload Bukti</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Panel QRIS (Muncul jika QRIS dipilih) -->
+                        <div id="qris-payment-panel" class="hidden bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-5 animate-fade-in">
+                            <div class="flex flex-col md:flex-row items-center gap-6">
+                                <!-- Kartu QRIS Asli Dapur 59 (164363.jpg) -->
+                                <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm text-center shrink-0 w-64">
+                                    <img src="164363.jpg" alt="QRIS DAPUR59 - NMID ID1025421980505" onerror="this.onerror=null; this.src='https://placehold.co/400x540/ffffff/1e293b?text=QRIS+DAPUR59%0ANMID:+ID1025421980505';" class="w-full h-auto rounded-xl border border-slate-100 object-contain">
+                                    <p class="text-[11px] font-bold text-slate-700 mt-2">DAPUR59 • NMID: ID1025421980505</p>
+                                    <p class="text-[10px] font-medium text-slate-500 mt-0.5">Scan via GoPay, OVO, Dana, ShopeePay, M-Banking</p>
+                                </div>
+
+                                <!-- Upload Bukti Transfer -->
+                                <div class="flex-1 w-full">
+                                    <label class="block text-sm font-bold text-slate-800 mb-1">
+                                        Upload Screenshot Bukti Transfer <span class="text-red-500">*</span>
+                                    </label>
+                                    <p class="text-xs text-slate-500 mb-3">
+                                        Pastikan nominal transfer sesuai dengan total tagihan (<strong id="qris-nominal-hint" class="text-orange-600">Rp0</strong>).
+                                    </p>
+
+                                    <label for="qris-proof-input" class="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-orange-300 rounded-2xl bg-white hover:bg-orange-50/50 transition cursor-pointer p-4 text-center">
+                                        <div id="qris-upload-placeholder">
+                                            <i class="fa-solid fa-cloud-arrow-up text-2xl text-orange-500 mb-2"></i>
+                                            <p class="text-xs font-bold text-slate-700">Klik untuk pilih screenshot bukti bayar</p>
+                                            <p class="text-[11px] text-slate-400 mt-0.5">Format: JPG, PNG, WEBP</p>
+                                        </div>
+                                        <div id="qris-upload-preview-box" class="hidden flex items-center gap-3">
+                                            <img id="qris-upload-preview-img" src="" alt="Preview Bukti" class="h-24 w-24 object-cover rounded-xl border border-slate-200 shadow-sm">
+                                            <div class="text-left">
+                                                <p class="text-xs font-bold text-emerald-600 flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> Bukti siap dikirim</p>
+                                                <p id="qris-file-name" class="text-[11px] text-slate-500 truncate max-w-[160px] mt-0.5">bukti.jpg</p>
+                                                <span class="inline-block mt-2 text-[11px] font-semibold text-orange-600 underline">Ganti gambar</span>
+                                            </div>
+                                        </div>
+                                        <input id="qris-proof-input" type="file" accept="image/*" onchange="handleQrisFileUpload(event)" class="hidden">
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Order Button -->
+                        <button type="submit" class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-extrabold text-base shadow-lg shadow-orange-500/30 transition transform active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>Kirim Pesanan Sekarang</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- TAB B: KIRIM MASUKAN & SARAN -->
+            <div id="buyer-tab-feedback" class="hidden">
+                <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-envelope-open-text"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-extrabold text-slate-900">Kotak Masukan & Saran</h2>
+                            <p class="text-xs sm:text-sm text-slate-500">Request menu baru, kritik rasa, atau saran untuk Dapur 59.</p>
+                        </div>
+                    </div>
+
+                    <form id="feedback-form" onsubmit="submitFeedback(event)" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama <span class="text-red-500">*</span></label>
+                                <input type="text" id="fb-name" required placeholder="Nama kamu" class="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">Kelas <span class="text-red-500">*</span></label>
+                                <input type="text" id="fb-class" required placeholder="Contoh: XII IPS 1" class="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Pesan / Saran / Request Menu <span class="text-red-500">*</span></label>
+                            <textarea id="fb-message" rows="4" required placeholder="Tulis masukan atau request menu minggu depan di sini..." class="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"></textarea>
+                        </div>
+
+                        <button type="submit" class="w-full py-3.5 px-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>Kirim Masukan ke Admin</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+    <!-- FIREBASE INITIALIZATION (ES MODULE)        -->
+    <!-- ========================================== -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAQBilqj50OvJYJuAYAZk6jt9RKbFLJb3c",
+            authDomain: "dapur59-47a5a.firebaseapp.com",
+            projectId: "dapur59-47a5a",
+            storageBucket: "dapur59-47a5a.firebasestorage.app",
+            messagingSenderId: "658361629913",
+            appId: "1:658361629913:web:b0ca0491bc6bd5bd6a52c8"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        window.firebaseApp = app;
+    </script>
+
+    <!-- ========================================== -->
+    <!-- JAVASCRIPT LOGIC & STATE MANAGEMENT        -->
+    <!-- ========================================== -->
+    <script>
+        // Konstanta Aplikasi
+        const PRICE_PER_PORTION = 10000;
+        const ADMIN_SECRET = "D@pur59!";
+        const DAYS_LIST = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"];
+        const STORAGE_KEYS = {
+            ORDERS: "dapur59_orders_v1",
+            FEEDBACK: "dapur59_feedback_v1",
+            LEDGER: "dapur59_ledger_v1"
+        };
+
+        // State Global
+        let currentView = "landing";
+        let selectedAdminDay = "Senin";
+        let timeSimulationMode = "week_open"; // 'week_open', 'tue_noon', 'thu_night', 'realtime'
+        let uploadedQrisBase64 = null;
+
+        // Data Awal (Contoh Realistis agar Dashboard langsung hidup saat pertama kali dibuka)
+        const DEFAULT_ORDERS = [
+            {
+                id: "D59-101",
+                day: "Senin",
+                name: "Nadia Putri",
+                studentClass: "XI IPA 1",
+                portions: 2,
+                notes: "Jangan pedas ya bu, sambalnya dipisah",
+                paymentMethod: "QRIS",
+                qrisProof: "SVG_SAMPLE_PROOF",
+                verified: true,
+                createdAt: "Minggu, 19:15"
+            },
+            {
+                id: "D59-102",
+                day: "Senin",
+                name: "Dimas Anggara",
+                studentClass: "XII IPS 2",
+                portions: 1,
+                notes: "Pilih menu piscok saja",
+                paymentMethod: "Cash",
+                qrisProof: null,
+                verified: false,
+                createdAt: "Minggu, 20:05"
+            },
+            {
+                id: "D59-103",
+                day: "Selasa",
+                name: "Alya Zahra",
+                studentClass: "X-4",
+                portions: 3,
+                notes: "Untuk makan siang bareng teman, porsi normal",
+                paymentMethod: "Cash",
+                qrisProof: null,
+                verified: true,
+                createdAt: "Senin, 14:20"
+            },
+            {
+                id: "D59-104",
+                day: "Rabu",
+                name: "Fajar Nugroho",
+                studentClass: "XI IPS 1",
+                portions: 2,
+                notes: "Tidak pakai sayur kol",
+                paymentMethod: "QRIS",
+                qrisProof: "SVG_SAMPLE_PROOF",
+                verified: false,
+                createdAt: "Selasa, 16:40"
+            }
+        ];
+
+        const DEFAULT_FEEDBACK = [
+            {
+                id: "FB-1",
+                name: "Salsa Bila",
+                studentClass: "XI IPA 3",
+                message: "Bu, minggu depan adain menu ayam suwir kemangi lagi dong! Enak banget kemarin porsinya juga pas.",
+                timestamp: "Senin, 12:30 WIB"
+            },
+            {
+                id: "FB-2",
+                name: "Rizky Ramadhan",
+                studentClass: "X-2",
+                message: "Piscok lumer buatan ibu mantap banget, kalau bisa ditambah varian keju cokelat bu.",
+                timestamp: "Minggu, 21:10 WIB"
+            }
+        ];
+
+        const DEFAULT_LEDGER = [
+            {
+                id: "ARC-01",
+                archivedDate: "06 Nov 2026",
+                dayName: "Rekap Minggu Lalu (Sen-Jum)",
+                totalPortions: 118,
+                targetRevenue: 1180000,
+                verifiedRevenue: 1180000,
+                status: "Lunas Semua"
+            },
+            {
+                id: "ARC-02",
+                archivedDate: "30 Okt 2026",
+                dayName: "Rekap Minggu Ke-4 Okt",
+                totalPortions: 105,
+                targetRevenue: 1050000,
+                verifiedRevenue: 1050000,
+                status: "Lunas Semua"
+            }
+        ];
+
+        // ==========================================
+        // HELPER: LOCALSTORAGE DATA ACCESS
+        // ==========================================
+        function getOrders() {
+            const raw = localStorage.getItem(STORAGE_KEYS.ORDERS);
+            if (!raw) {
+                localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(DEFAULT_ORDERS));
+                return [...DEFAULT_ORDERS];
+            }
+            return JSON.parse(raw);
+        }
+
+        function saveOrders(orders) {
+            localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+        }
+
+        function getFeedbacks() {
+            const raw = localStorage.getItem(STORAGE_KEYS.FEEDBACK);
+            if (!raw) {
+                localStorage.setItem(STORAGE_KEYS.FEEDBACK, JSON.stringify(DEFAULT_FEEDBACK));
+                return [...DEFAULT_FEEDBACK];
+            }
+            return JSON.parse(raw);
+        }
+
+        function saveFeedbacks(list) {
+            localStorage.setItem(STORAGE_KEYS.FEEDBACK, JSON.stringify(list));
+        }
+
+        function getLedger() {
+            const raw = localStorage.getItem(STORAGE_KEYS.LEDGER);
+            if (!raw) {
+                localStorage.setItem(STORAGE_KEYS.LEDGER, JSON.stringify(DEFAULT_LEDGER));
+                return [...DEFAULT_LEDGER];
+            }
+            return JSON.parse(raw);
+        }
+
+        function saveLedger(list) {
+            localStorage.setItem(STORAGE_KEYS.LEDGER, JSON.stringify(list));
+        }
+
+        function formatRupiah(num) {
+            return "Rp" + Number(num || 0).toLocaleString("id-ID");
+        }
+
+        // ==========================================
+        // TOAST NOTIFICATION (Pengganti alert)
+        // ==========================================
+        function showToast(message, type = "success") {
+            const container = document.getElementById("toast-container");
+            const toast = document.createElement("div");
+            const styles = {
+                success: "bg-slate-900 text-white border-emerald-500",
+                error: "bg-red-600 text-white border-red-800",
+                warning: "bg-amber-500 text-slate-950 border-amber-700"
+            };
+            const icons = {
+                success: "fa-circle-check text-emerald-400",
+                error: "fa-circle-exclamation text-white",
+                warning: "fa-triangle-exclamation text-slate-900"
+            };
+
+            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-xl border-l-4 text-xs sm:text-sm font-semibold animate-fade-in ${styles[type] || styles.success}`;
+            toast.innerHTML = `
+                <i class="fa-solid ${icons[type] || icons.success} text-base shrink-0"></i>
+                <span class="flex-1">${message}</span>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                toast.style.transform = "translateY(-6px)";
+                toast.style.transition = "all 0.25s ease";
+                setTimeout(() => toast.remove(), 260);
+            }, 3400);
+        }
+
+        // ==========================================
+        // NAVIGASI HALAMAN & MODAL ADMIN
+        // ==========================================
+        function navigateTo(view) {
+            currentView = view;
+            const landing = document.getElementById("view-landing");
+            const buyer = document.getElementById("view-buyer");
+            const admin = document.getElementById("view-admin");
+            const navbar = document.getElementById("top-navbar");
+            const subtitle = document.getElementById("nav-subtitle");
+
+            landing.classList.add("hidden");
+            buyer.classList.add("hidden");
+            admin.classList.add("hidden");
+
+            if (view === "landing") {
+                navbar.classList.add("hidden");
+                landing.classList.remove("hidden");
+            } else if (view === "buyer") {
+                navbar.classList.remove("hidden");
+                subtitle.textContent = "Portal Pembeli • Pre-Order H-1";
+                buyer.classList.remove("hidden");
+                renderBuyerDays();
+            } else if (view === "admin") {
+                navbar.classList.remove("hidden");
+                subtitle.textContent = "Dashboard Admin • Pembukuan";
+                admin.classList.remove("hidden");
+                refreshAdminDashboard();
+            }
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        function openAdminLoginModal() {
+            document.getElementById("admin-password-input").value = "";
+            document.getElementById("admin-login-error").classList.add("hidden");
+            document.getElementById("modal-admin-login").classList.remove("hidden");
+            setTimeout(() => document.getElementById("admin-password-input").focus(), 100);
+        }
+
+        function closeAdminLoginModal() {
+            document.getElementById("modal-admin-login").classList.add("hidden");
+        }
+
+        function togglePasswordVisibility() {
+            const input = document.getElementById("admin-password-input");
+            const icon = document.getElementById("pw-eye-icon");
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.replace("fa-eye", "fa-eye-slash");
+            } else {
+                input.type = "password";
+                icon.classList.replace("fa-eye-slash", "fa-eye");
+            }
+        }
+
+        function verifyAdminPassword(e) {
+            e.preventDefault();
+            const val = document.getElementById("admin-password-input").value;
+            if (val === ADMIN_SECRET) {
+                closeAdminLoginModal();
+                showToast("Login berhasil! Selamat datang di Dashboard Admin.", "success");
+                navigateTo("admin");
+            } else {
+                document.getElementById("admin-login-error").classList.remove("hidden");
+            }
+        }
+
+        // ==========================================
+        // LOGIKA ATURAN PO H-1 PUKUL 23:59
+        // ==========================================
+        function getSimulatedNow() {
+            const now = new Date();
+            // Cari hari Senin minggu aktif sebagai patokan
+            const dayOfWeek = now.getDay(); // 0=Minggu, 1=Senin, ...
+            // Jika Minggu (0), target PO adalah Senin besok (+1 hari)
+            const diffToMonday = dayOfWeek === 0 ? 1 : (1 - dayOfWeek);
+            const targetMonday = new Date(now);
+            targetMonday.setDate(now.getDate() + diffToMonday);
+            targetMonday.setHours(0, 0, 0, 0);
+
+            if (timeSimulationMode === "realtime") {
+                return { current: now, targetMonday };
+            } else if (timeSimulationMode === "week_open") {
+                // Minggu malam pukul 20:00 (H-1 sebelum Senin 23:59 -> Semua hari Senin-Jumat BUKA)
+                const sim = new Date(targetMonday);
+                sim.setDate(targetMonday.getDate() - 1);
+                sim.setHours(20, 0, 0, 0);
+                return { current: sim, targetMonday };
+            } else if (timeSimulationMode === "tue_noon") {
+                // Selasa pukul 12:00 (Senin & Selasa sudah melewati H-1 23:59 -> CLOSE; Rabu-Jumat BUKA)
+                const sim = new Date(targetMonday);
+                sim.setDate(targetMonday.getDate() + 1);
+                sim.setHours(12, 0, 0, 0);
+                return { current: sim, targetMonday };
+            } else if (timeSimulationMode === "thu_night") {
+                // Kamis pukul 23:59:30 (Senin-Kamis CLOSE; Jumat BUKA sampai 23:59)
+                const sim = new Date(targetMonday);
+                sim.setDate(targetMonday.getDate() + 3);
+                sim.setHours(23, 59, 30, 0);
+                return { current: sim, targetMonday };
+            }
+            return { current: now, targetMonday };
+        }
+
+        function handleTimeSimulationChange(mode) {
+            timeSimulationMode = mode;
+            renderBuyerDays();
+        }
+
+        function getDayScheduleStatus() {
+            const { current, targetMonday } = getSimulatedNow();
+
+            // Update label simulasi di UI
+            const dayNamesFull = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+            const timeStr = `${dayNamesFull[current.getDay()]}, ${current.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })} • ${String(current.getHours()).padStart(2, "0")}:${String(current.getMinutes()).padStart(2, "0")} WIB`;
+            document.getElementById("active-sim-time-label").textContent = `Waktu aktif: ${timeStr}`;
+
+            return DAYS_LIST.map((dayName, idx) => {
+                // Target hari PO (Senin = +0, Selasa = +1, ..., Jumat = +4)
+                const targetDate = new Date(targetMonday);
+                targetDate.setDate(targetMonday.getDate() + idx);
+
+                // Batas Close Order = H-1 pukul 23:59:59
+                const closeDeadline = new Date(targetDate);
+                closeDeadline.setDate(targetDate.getDate() - 1);
+                closeDeadline.setHours(23, 59, 59, 999);
+
+                const isClosed = current > closeDeadline;
+                const deadlineDayName = dayNamesFull[closeDeadline.getDay()];
+
+                return {
+                    dayName,
+                    dateFormatted: targetDate.toLocaleDateString("id-ID", { day: "numeric", month: "short" }),
+                    deadlineLabel: `Tutup: ${deadlineDayName}, 23:59`,
+                    isClosed
+                };
+            });
+        }
+
+        // ==========================================
+        // SISI PEMBELI: RENDER HARI & KALKULASI
+        // ==========================================
+        function switchBuyerTab(tab) {
+            const orderTab = document.getElementById("buyer-tab-order");
+            const fbTab = document.getElementById("buyer-tab-feedback");
+            const btnOrder = document.getElementById("tab-btn-order");
+            const btnFb = document.getElementById("tab-btn-feedback");
+
+            if (tab === "order") {
+                orderTab.classList.remove("hidden");
+                fbTab.classList.add("hidden");
+                btnOrder.className = "py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all bg-orange-500 text-white shadow-sm";
+                btnFb.className = "py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all text-slate-600 hover:bg-slate-50";
+            } else {
+                orderTab.classList.add("hidden");
+                fbTab.classList.remove("hidden");
+                btnFb.className = "py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all bg-orange-500 text-white shadow-sm";
+                btnOrder.className = "py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all text-slate-600 hover:bg-slate-50";
+            }
+        }
+
+        function renderBuyerDays() {
+            const container = document.getElementById("days-selection-container");
+            const schedules = getDayScheduleStatus();
+
+            container.innerHTML = schedules.map((item) => {
+                if (item.isClosed) {
+                    return `
+                        <div class="p-4 rounded-2xl border border-slate-200 bg-slate-100/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 opacity-80">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-slate-200 text-slate-400 flex items-center justify-center font-bold text-sm">
+                                    <i class="fa-solid fa-lock"></i>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-extrabold text-slate-600">${item.dayName}</span>
+                                        <span class="text-xs text-slate-400">(${item.dateFormatted})</span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-400">${item.deadlineLabel}</p>
+                                </div>
+                            </div>
+                            <button type="button" disabled class="px-4 py-2 rounded-xl bg-red-100 text-red-700 font-bold text-xs border border-red-200 cursor-not-allowed self-start sm:self-center">
+                                <i class="fa-solid fa-ban mr-1"></i> Maaf, PO sudah close
+                            </button>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div id="day-card-${item.dayName}" class="p-4 rounded-2xl border-2 border-slate-200 bg-white transition-all">
+                        <div class="flex items-center justify-between gap-3">
+                            <label class="flex items-center gap-3 cursor-pointer flex-1 select-none">
+                                <input type="checkbox" id="chk-${item.dayName}" value="${item.dayName}" onchange="toggleDaySelection('${item.dayName}')" class="w-5 h-5 rounded-md accent-orange-500 cursor-pointer">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-extrabold text-slate-900 text-base">${item.dayName}</span>
+                                        <span class="text-xs font-medium text-slate-400">(${item.dateFormatted})</span>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">PO Buka</span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500">${item.deadlineLabel}</p>
+                                </div>
+                            </label>
+                            <span class="text-xs font-bold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-lg">Rp10.000/porsi</span>
+                        </div>
+
+                        <!-- Detail Porsi & Catatan Khusus (Muncul saat hari dicentang) -->
+                        <div id="details-${item.dayName}" class="hidden mt-4 pt-3.5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-12 gap-3 animate-fade-in">
+                            <div class="sm:col-span-4">
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">Jumlah Porsi</label>
+                                <div class="flex items-center border border-slate-300 rounded-xl overflow-hidden bg-slate-50">
+                                    <button type="button" onclick="adjustPortion('${item.dayName}', -1)" class="w-10 h-10 font-bold text-slate-700 hover:bg-slate-200 transition">-</button>
+                                    <input type="number" id="qty-${item.dayName}" value="1" min="1" max="50" onchange="recalculateOrderTotal()" class="w-full text-center font-extrabold text-sm bg-white h-10 focus:outline-none">
+                                    <button type="button" onclick="adjustPortion('${item.dayName}', 1)" class="w-10 h-10 font-bold text-slate-700 hover:bg-slate-200 transition">+</button>
+                                </div>
+                            </div>
+                            <div class="sm:col-span-8">
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">Catatan Khusus (Opsional)</label>
+                                <input type="text" id="note-${item.dayName}" placeholder='Misal: "Jangan pedas", "Pilih menu piscok saja"' class="w-full h-10 px-3.5 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+
+            recalculateOrderTotal();
+        }
+
+        function toggleDaySelection(dayName) {
+            const chk = document.getElementById(`chk-${dayName}`);
+            const card = document.getElementById(`day-card-${dayName}`);
+            const details = document.getElementById(`details-${dayName}`);
+
+            if (chk.checked) {
+                card.classList.remove("border-slate-200");
+                card.classList.add("border-orange-500", "bg-orange-50/20");
+                details.classList.remove("hidden");
+            } else {
+                card.classList.add("border-slate-200");
+                card.classList.remove("border-orange-500", "bg-orange-50/20");
+                details.classList.add("hidden");
+            }
+            recalculateOrderTotal();
+        }
+
+        function adjustPortion(dayName, delta) {
+            const input = document.getElementById(`qty-${dayName}`);
+            let val = parseInt(input.value || "1", 10) + delta;
+            if (val < 1) val = 1;
+            if (val > 50) val = 50;
+            input.value = val;
+            recalculateOrderTotal();
+        }
+
+        function recalculateOrderTotal() {
+            let totalPortions = 0;
+            DAYS_LIST.forEach((day) => {
+                const chk = document.getElementById(`chk-${day}`);
+                if (chk && chk.checked) {
+                    const qty = parseInt(document.getElementById(`qty-${day}`).value || "1", 10);
+                    totalPortions += Math.max(1, qty);
+                }
+            });
+
+            const totalPrice = totalPortions * PRICE_PER_PORTION;
+            document.getElementById("summary-total-portions").textContent = `${totalPortions} Porsi`;
+            document.getElementById("summary-total-price").textContent = formatRupiah(totalPrice);
+            document.getElementById("qris-nominal-hint").textContent = formatRupiah(totalPrice);
+        }
+
+        function togglePaymentMethod(method) {
+            const qrisPanel = document.getElementById("qris-payment-panel");
+            if (method === "QRIS") {
+                qrisPanel.classList.remove("hidden");
+            } else {
+                qrisPanel.classList.add("hidden");
+            }
+        }
+
+        function handleQrisFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith("image/")) {
+                showToast("Harap pilih file gambar (JPG/PNG) untuk bukti transfer.", "error");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                uploadedQrisBase64 = e.target.result;
+                document.getElementById("qris-upload-placeholder").classList.add("hidden");
+                document.getElementById("qris-upload-preview-box").classList.remove("hidden");
+                document.getElementById("qris-upload-preview-img").src = uploadedQrisBase64;
+                document.getElementById("qris-file-name").textContent = file.name;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Submit Pesanan Pembeli
+        function submitOrder(e) {
+            e.preventDefault();
+
+            const selectedDays = [];
+            DAYS_LIST.forEach((day) => {
+                const chk = document.getElementById(`chk-${day}`);
+                if (chk && chk.checked) {
+                    const qty = Math.max(1, parseInt(document.getElementById(`qty-${day}`).value || "1", 10));
+                    const note = document.getElementById(`note-${day}`).value.trim();
+                    selectedDays.push({ day, portions: qty, notes: note });
+                }
+            });
+
+            if (selectedDays.length === 0) {
+                showToast("Pilih minimal 1 hari pemesanan terlebih dahulu!", "warning");
+                return;
+            }
+
+            const buyerName = document.getElementById("buyer-name").value.trim();
+            const buyerClass = document.getElementById("buyer-class").value.trim();
+            const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
+
+            if (paymentMethod === "QRIS" && !uploadedQrisBase64) {
+                showToast("Wajib upload screenshot bukti transfer QRIS!", "error");
+                return;
+            }
+
+            const existingOrders = getOrders();
+            const batchCode = "D59-" + Math.floor(100 + Math.random() * 900);
+            const nowLabel = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+
+            selectedDays.forEach((item, index) => {
+                existingOrders.unshift({
+                    id: selectedDays.length > 1 ? `${batchCode}-${index + 1}` : batchCode,
+                    day: item.day,
+                    name: buyerName,
+                    studentClass: buyerClass,
+                    portions: item.portions,
+                    notes: item.notes || "-",
+                    paymentMethod: paymentMethod,
+                    qrisProof: paymentMethod === "QRIS" ? uploadedQrisBase64 : null,
+                    verified: false,
+                    createdAt: `Hari ini, ${nowLabel}`
+                });
+            });
+
+            saveOrders(existingOrders);
+
+            // Tampilkan Struk / Bukti Pemesanan untuk di-screenshot
+            showOrderReceiptModal({
+                orderId: batchCode,
+                name: buyerName,
+                studentClass: buyerClass,
+                items: selectedDays,
+                paymentMethod: paymentMethod
+            });
+
+            // Reset form
+            document.getElementById("order-form").reset();
+            uploadedQrisBase64 = null;
+            document.getElementById("qris-upload-placeholder").classList.remove("hidden");
+            document.getElementById("qris-upload-preview-box").classList.add("hidden");
+            togglePaymentMethod("Cash");
+            renderBuyerDays();
+        }
+
+        function showOrderReceiptModal(data) {
+            document.getElementById("receipt-order-id").textContent = `#${data.orderId}`;
+            document.getElementById("receipt-buyer-name").textContent = data.name;
+            document.getElementById("receipt-buyer-class").textContent = data.studentClass;
+            document.getElementById("receipt-payment-method").textContent = data.paymentMethod;
+            document.getElementById("receipt-payment-status").textContent =
+                data.paymentMethod === "QRIS" ? "Bukti QRIS terlampir • Menunggu cek admin" : "Bayar Tunai (Cash) • Menunggu konfirmasi";
+
+            let totalPortions = 0;
+            const listEl = document.getElementById("receipt-items-list");
+            listEl.innerHTML = data.items.map((item) => {
+                totalPortions += item.portions;
+                return `
+                    <div class="flex items-start justify-between gap-2 pb-1.5 border-b border-slate-200/60 last:border-none last:pb-0">
+                        <div>
+                            <span class="font-bold text-slate-800">${item.day}</span>
+                            <span class="text-slate-500"> (${item.portions} porsi)</span>
+                            ${item.notes ? `<p class="text-[11px] text-orange-600 italic">"${item.notes}"</p>` : ""}
+                        </div>
+                        <span class="font-bold text-slate-800">${formatRupiah(item.portions * PRICE_PER_PORTION)}</span>
+                    </div>
+                `;
+            }).join("");
+
+            document.getElementById("receipt-total-price").textContent = formatRupiah(totalPortions * PRICE_PER_PORTION);
+            document.getElementById("modal-order-receipt").classList.remove("hidden");
+        }
+
+        function closeReceiptModal() {
+            document.getElementById("modal-order-receipt").classList.add("hidden");
+        }
+
+        // Submit Masukan & Saran
+        function submitFeedback(e) {
+            e.preventDefault();
+            const name = document.getElementById("fb-name").value.trim();
+            const studentClass = document.getElementById("fb-class").value.trim();
+            const message = document.getElementById("fb-message").value.trim();
+
+            const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+            const now = new Date();
+            const timestamp = `${dayNames[now.getDay()]}, ${now.toLocaleDateString("id-ID", { day: "numeric", month: "short" })} • ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")} WIB`;
+
+            const list = getFeedbacks();
+            list.unshift({
+                id: "FB-" + Date.now(),
+                name,
+                studentClass,
+                message,
+                timestamp
+            });
+            saveFeedbacks(list);
+
+            document.getElementById("feedback-form").reset();
+            showToast("Terima kasih! Masukan & saranmu sudah terkirim ke Admin.", "success");
+        }
+
+        // ==========================================
+        // SISI ADMIN: DASHBOARD, REKAP & PEMBUKUAN
+        // ==========================================
+        function switchAdminMainTab(tab) {
+            const bkSection = document.getElementById("admin-section-bookkeeping");
+            const fbSection = document.getElementById("admin-section-feedback");
+            const btnBk = document.getElementById("admin-main-tab-bookkeeping");
+            const btnFb = document.getElementById("admin-main-tab-feedback");
+
+            if (tab === "bookkeeping") {
+                bkSection.classList.remove("hidden");
+                fbSection.classList.add("hidden");
+                btnBk.className = "px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition bg-slate-900 text-white shadow-sm";
+                btnFb.className = "px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition text-slate-600 hover:bg-slate-100";
+            } else {
+                bkSection.classList.add("hidden");
+                fbSection.classList.remove("hidden");
+                btnFb.className = "px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition bg-slate-900 text-white shadow-sm";
+                btnBk.className = "px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition text-slate-600 hover:bg-slate-100";
+                renderAdminFeedback();
+            }
+        }
+
+        function switchBookkeepingSubTab(sub) {
+            const dailyView = document.getElementById("bookkeeping-daily-view");
+            const ledgerView = document.getElementById("bookkeeping-ledger-view");
+            const btnDaily = document.getElementById("subtab-daily-btn");
+            const btnLedger = document.getElementById("subtab-ledger-btn");
+
+            if (sub === "daily") {
+                dailyView.classList.remove("hidden");
+                ledgerView.classList.add("hidden");
+                btnDaily.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-orange-500 text-white shadow-sm transition";
+                btnLedger.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition";
+                renderAdminDailyRecap();
+            } else {
+                dailyView.classList.add("hidden");
+                ledgerView.classList.remove("hidden");
+                btnLedger.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-orange-500 text-white shadow-sm transition";
+                btnDaily.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition";
+                renderAdminLedger();
+            }
+        }
+
+        function refreshAdminDashboard() {
+            const feedbacks = getFeedbacks();
+            document.getElementById("admin-fb-badge").textContent = feedbacks.length;
+            renderAdminDailyRecap();
+            renderAdminLedger();
+            renderAdminFeedback();
+        }
+
+        function selectAdminDay(dayName) {
+            selectedAdminDay = dayName;
+            renderAdminDailyRecap();
+        }
+
+        function renderAdminDailyRecap() {
+            const allOrders = getOrders();
+
+            // Render Day Pills (Senin - Jumat)
+            const pillsContainer = document.getElementById("admin-day-pills");
+            pillsContainer.innerHTML = DAYS_LIST.map((day) => {
+                const count = allOrders.filter((o) => o.day === day).reduce((sum, o) => sum + o.portions, 0);
+                const isActive = day === selectedAdminDay;
+                return `
+                    <button onclick="selectAdminDay('${day}')" class="p-2.5 sm:p-3.5 rounded-2xl border text-center transition cursor-pointer ${
+                        isActive
+                            ? "bg-slate-900 text-white border-slate-900 shadow-md"
+                            : "bg-white text-slate-700 border-slate-200 hover:border-orange-300"
+                    }">
+                        <p class="font-extrabold text-xs sm:text-sm">${day}</p>
+                        <p class="text-[11px] mt-0.5 ${isActive ? "text-amber-400 font-bold" : "text-slate-400"}">${count} Porsi</p>
+                    </button>
+                `;
+            }).join("");
+
+            // Filter pesanan untuk hari terpilih
+            const dayOrders = allOrders.filter((o) => o.day === selectedAdminDay);
+
+            // Kalkulasi Porsi & Keuangan
+            const totalPortions = dayOrders.reduce((sum, o) => sum + o.portions, 0);
+            const targetRevenue = totalPortions * PRICE_PER_PORTION;
+            const verifiedRevenue = dayOrders
+                .filter((o) => o.verified)
+                .reduce((sum, o) => sum + o.portions * PRICE_PER_PORTION, 0);
+            const unpaidRevenue = targetRevenue - verifiedRevenue;
+
+            // Update Stat Cards
+            document.getElementById("stat-total-portions").textContent = `${totalPortions} Porsi`;
+            document.getElementById("stat-selected-day-label").textContent = `Khusus Hari ${selectedAdminDay}`;
+            document.getElementById("stat-target-revenue").textContent = formatRupiah(targetRevenue);
+            document.getElementById("stat-verified-revenue").textContent = formatRupiah(verifiedRevenue);
+            document.getElementById("stat-unpaid-revenue").textContent = formatRupiah(unpaidRevenue);
+            document.getElementById("table-day-title").textContent = selectedAdminDay;
+
+            const unpaidCard = document.getElementById("stat-unpaid-card");
+            const unpaidStatus = document.getElementById("stat-unpaid-status");
+            if (totalPortions > 0 && unpaidRevenue === 0) {
+                unpaidCard.className = "bg-emerald-50/70 p-4 sm:p-5 rounded-2xl border border-emerald-200 shadow-sm";
+                unpaidStatus.textContent = "Semua pesanan sudah lunas!";
+                unpaidStatus.className = "text-[11px] text-emerald-700 font-bold mt-1";
+            } else {
+                unpaidCard.className = "bg-white p-4 sm:p-5 rounded-2xl border border-amber-200 shadow-sm";
+                unpaidStatus.textContent = unpaidRevenue > 0 ? "Ada pembayaran belum dicek" : "Belum ada pesanan";
+                unpaidStatus.className = "text-[11px] text-amber-700 mt-1";
+            }
+
+            // Render Tabel Pesanan
+            const tbody = document.getElementById("admin-orders-tbody");
+            if (dayOrders.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="py-12 text-center text-slate-400">
+                            <i class="fa-regular fa-folder-open text-3xl mb-2 block"></i>
+                            <p class="text-sm font-semibold">Belum ada pesanan masuk untuk hari ${selectedAdminDay}.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = dayOrders.map((order) => {
+                const subtotal = order.portions * PRICE_PER_PORTION;
+                const isQris = order.paymentMethod === "QRIS";
+
+                return `
+                    <tr class="hover:bg-slate-50/80 transition ${order.verified ? "bg-emerald-50/20" : ""}">
+                        <td class="py-3.5 px-4">
+                            <p class="font-bold text-slate-900">${order.name}</p>
+                            <p class="text-xs text-slate-500">Kelas: <span class="font-semibold text-slate-700">${order.studentClass}</span> • <span class="text-[11px] text-slate-400">${order.createdAt}</span></p>
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-orange-100 text-orange-800 font-extrabold text-xs">
+                                ${order.portions} Porsi
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 max-w-xs">
+                            <p class="text-xs text-slate-600 ${order.notes !== "-" ? "italic font-medium text-slate-800" : "text-slate-400"}">
+                                ${order.notes !== "-" ? `"${order.notes}"` : "Tidak ada catatan"}
+                            </p>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            ${
+                                isQris
+                                    ? `<div class="flex items-center gap-2">
+                                        <span class="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 font-bold text-[11px]">QRIS</span>
+                                        <button onclick="openQrisPreviewModal('${order.id}')" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm transition cursor-pointer">
+                                            <i class="fa-regular fa-image"></i> Cek Bukti
+                                        </button>
+                                       </div>`
+                                    : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 font-bold text-xs">
+                                        <i class="fa-solid fa-money-bill-wave text-emerald-600"></i> Cash
+                                       </span>`
+                            }
+                        </td>
+                        <td class="py-3.5 px-4 text-right font-extrabold text-slate-900">
+                            ${formatRupiah(subtotal)}
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <button onclick="toggleOrderVerification('${order.id}')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer ${
+                                order.verified
+                                    ? "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700"
+                                    : "bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200"
+                            }">
+                                <i class="fa-solid ${order.verified ? "fa-circle-check" : "fa-circle"}"></i>
+                                <span>${order.verified ? "Terverifikasi" : "Belum Bayar"}</span>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        function toggleOrderVerification(orderId) {
+            const orders = getOrders();
+            const idx = orders.findIndex((o) => o.id === orderId);
+            if (idx !== -1) {
+                orders[idx].verified = !orders[idx].verified;
+                saveOrders(orders);
+                renderAdminDailyRecap();
+                showToast(
+                    orders[idx].verified
+                        ? `Pembayaran ${orders[idx].name} berhasil diverifikasi!`
+                        : `Status pembayaran ${orders[idx].name} dikembalikan ke Belum Bayar.`,
+                    orders[idx].verified ? "success" : "warning"
+                );
+            }
+        }
+
+        function openQrisPreviewModal(orderId) {
+            const order = getOrders().find((o) => o.id === orderId);
+            if (!order) return;
+
+            document.getElementById("preview-modal-buyer-info").textContent = `${order.name} (${order.studentClass}) • ${order.portions} Porsi (${formatRupiah(order.portions * PRICE_PER_PORTION)})`;
+
+            const imgEl = document.getElementById("preview-modal-image");
+            if (order.qrisProof && order.qrisProof.startsWith("data:image")) {
+                imgEl.src = order.qrisProof;
+            } else {
+                // Fallback ilustrasi struk transfer untuk data demo bawaan
+                const svgDemo = encodeURIComponent(`
+                    <svg xmlns="http://www.w3.org/2000/svg" width="320" height="420" viewBox="0 0 320 420">
+                        <rect width="320" height="420" rx="20" fill="#f8fafc"/>
+                        <rect x="20" y="20" width="280" height="380" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+                        <circle cx="160" cy="75" r="26" fill="#10b981"/>
+                        <path d="M148 75 l8 8 l16 -16" stroke="#ffffff" stroke-width="4" fill="none" stroke-linecap="round"/>
+                        <text x="160" y="122" font-family="sans-serif" font-size="16" font-weight="bold" fill="#0f172a" text-anchor="middle">Pembayaran QRIS Berhasil</text>
+                        <text x="160" y="144" font-family="sans-serif" font-size="12" fill="#64748b" text-anchor="middle">Merchant: DAPUR 59 - IBU</text>
+                        <line x1="40" y1="168" x2="280" y2="168" stroke="#e2e8f0" stroke-dasharray="4"/>
+                        <text x="45" y="198" font-family="sans-serif" font-size="12" fill="#64748b">Pengirim:</text>
+                        <text x="275" y="198" font-family="sans-serif" font-size="12" font-weight="bold" fill="#0f172a" text-anchor="end">${order.name}</text>
+                        <text x="45" y="226" font-family="sans-serif" font-size="12" fill="#64748b">Nominal:</text>
+                        <text x="275" y="226" font-family="sans-serif" font-size="15" font-weight="bold" fill="#ea580c" text-anchor="end">${formatRupiah(order.portions * PRICE_PER_PORTION)}</text>
+                        <text x="45" y="254" font-family="sans-serif" font-size="12" fill="#64748b">Status:</text>
+                        <text x="275" y="254" font-family="sans-serif" font-size="12" font-weight="bold" fill="#10b981" text-anchor="end">VALID / LUNAS</text>
+                        <rect x="45" y="290" width="230" height="75" rx="10" fill="#f1f5f9"/>
+                        <text x="160" y="324" font-family="sans-serif" font-size="11" fill="#475569" text-anchor="middle">Contoh Screenshot Bukti Transfer</text>
+                        <text x="160" y="342" font-family="sans-serif" font-size="10" fill="#94a3b8" text-anchor="middle">Ref ID: QRIS-${order.id}</text>
+                    </svg>
+                `);
+                imgEl.src = `data:image/svg+xml;utf8,${svgDemo}`;
+            }
+
+            document.getElementById("modal-qris-preview").classList.remove("hidden");
+        }
+
+        function closeQrisPreviewModal() {
+            document.getElementById("modal-qris-preview").classList.add("hidden");
+        }
+
+        // Arsipkan Hari ke Pembukuan Utama
+        function archiveDayToLedger() {
+            const allOrders = getOrders();
+            const dayOrders = allOrders.filter((o) => o.day === selectedAdminDay);
+
+            if (dayOrders.length === 0) {
+                showToast(`Tidak ada pesanan pada hari ${selectedAdminDay} untuk diarsipkan.`, "warning");
+                return;
+            }
+
+            const totalPortions = dayOrders.reduce((sum, o) => sum + o.portions, 0);
+            const targetRevenue = totalPortions * PRICE_PER_PORTION;
+            const verifiedRevenue = dayOrders
+                .filter((o) => o.verified)
+                .reduce((sum, o) => sum + o.portions * PRICE_PER_PORTION, 0);
+
+            const ledger = getLedger();
+            const todayStr = new Date().toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+
+            ledger.unshift({
+                id: "ARC-" + Date.now(),
+                archivedDate: todayStr,
+                dayName: `Hari ${selectedAdminDay}`,
+                totalPortions,
+                targetRevenue,
+                verifiedRevenue,
+                status: verifiedRevenue === targetRevenue ? "Lunas Semua" : `Kurang ${formatRupiah(targetRevenue - verifiedRevenue)}`
+            });
+
+            saveLedger(ledger);
+            renderAdminLedger();
+            showToast(`Rekap hari ${selectedAdminDay} (${totalPortions} porsi) berhasil disimpan ke Pembukuan Utama!`, "success");
+        }
+
+        function renderAdminLedger() {
+            const ledger = getLedger();
+            const tbody = document.getElementById("admin-ledger-tbody");
+
+            let grandPortions = 0;
+            let grandRevenue = 0;
+
+            tbody.innerHTML = ledger.map((row) => {
+                grandPortions += row.totalPortions;
+                grandRevenue += row.verifiedRevenue;
+                const isComplete = row.verifiedRevenue >= row.targetRevenue;
+
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3.5 px-4 font-semibold text-slate-700">${row.archivedDate}</td>
+                        <td class="py-3.5 px-4 font-bold text-slate-900">${row.dayName}</td>
+                        <td class="py-3.5 px-4 text-center font-bold text-slate-800">${row.totalPortions} Porsi</td>
+                        <td class="py-3.5 px-4 text-right text-slate-600">${formatRupiah(row.targetRevenue)}</td>
+                        <td class="py-3.5 px-4 text-right font-extrabold text-emerald-600">${formatRupiah(row.verifiedRevenue)}</td>
+                        <td class="py-3.5 px-4 text-center">
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                                isComplete ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"
+                            }">
+                                ${row.status}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+
+            document.getElementById("ledger-grand-portions").textContent = `${grandPortions} Porsi`;
+            document.getElementById("ledger-grand-revenue").textContent = formatRupiah(grandRevenue);
+        }
+
+        function exportLedgerCSV() {
+            const ledger = getLedger();
+            let csv = "Tanggal Arsip,Hari PO,Total Porsi,Target Omzet,Uang Masuk Valid,Status\n";
+            ledger.forEach((r) => {
+                csv += `"${r.archivedDate}","${r.dayName}",${r.totalPortions},${r.targetRevenue},${r.verifiedRevenue},"${r.status}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `Pembukuan_Dapur59_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("File CSV Pembukuan Utama berhasil diunduh.", "success");
+        }
+
+        // Render Daftar Masukan & Saran di Admin
+        function renderAdminFeedback() {
+            const list = getFeedbacks();
+            document.getElementById("fb-total-count-label").textContent = `${list.length} Pesan`;
+            document.getElementById("admin-fb-badge").textContent = list.length;
+
+            const container = document.getElementById("admin-feedback-list");
+            if (list.length === 0) {
+                container.innerHTML = `<p class="text-sm text-slate-400 col-span-2 text-center py-10">Belum ada masukan atau saran dari pembeli.</p>`;
+                return;
+            }
+
+            container.innerHTML = list.map((fb) => `
+                <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex flex-col justify-between gap-3">
+                    <div>
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-extrabold text-xs flex items-center justify-center">
+                                    ${fb.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <p class="font-bold text-sm text-slate-900 leading-tight">${fb.name}</p>
+                                    <p class="text-[11px] font-semibold text-orange-600">Kelas ${fb.studentClass}</p>
+                                </div>
+                            </div>
+                            <span class="text-[11px] text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg">${fb.timestamp}</span>
+                        </div>
+                        <p class="text-sm text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-100 mt-2">
+                            "${fb.message}"
+                        </p>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        function resetDemoData() {
+            localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(DEFAULT_ORDERS));
+            localStorage.setItem(STORAGE_KEYS.FEEDBACK, JSON.stringify(DEFAULT_FEEDBACK));
+            localStorage.setItem(STORAGE_KEYS.LEDGER, JSON.stringify(DEFAULT_LEDGER));
+            refreshAdminDashboard();
+            showToast("Data demo berhasil dikembalikan ke pengaturan awal.", "success");
+        }
+
+        // Inisialisasi saat halaman dimuat
+        window.addEventListener("DOMContentLoaded", () => {
+            getOrders();
+            getFeedbacks();
+            getLedger();
+            navigateTo("landing");
+        });
+    </script>
 </body>
 </html>
